@@ -33,10 +33,12 @@ export default function Login() {
         timer: 1500,
       });
       console.log(response.data, "response");
-      
+
       localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("status", response.data.status);
+      localStorage.setItem("status", response.data.status || "online");
       localStorage.setItem("id", response.data.id);
+      localStorage.setItem("username", response.data.username);
+      localStorage.setItem("email", response.data.email);
 
       navigate("/");
     } catch (error) {
