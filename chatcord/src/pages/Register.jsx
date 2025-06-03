@@ -1,25 +1,22 @@
-import Swal from "sweetalert2";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
+import Swal from "sweetalert2";
 import http from "../lib/http";
 
-export default function Login() {
+export default function Register() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const access_token = localStorage.getItem("access_token");
-  if (access_token) {
-    return <Navigate to="/" />;
-  }
-
-  async function handleSubmit(e) {
+  async function hadlesubmit(e) {
     e.preventDefault();
     try {
       const response = await http({
         method: "POST",
-        url: "/login",
+        url: "/register",
         data: {
+          username: username,
           email: email,
           password: password,
         },
@@ -28,17 +25,13 @@ export default function Login() {
       Swal.fire({
         position: "top-end",
         icon: "success",
-        title: "Login successful!",
+        title: "Registration successful!",
         showConfirmButton: false,
         timer: 1500,
       });
-      console.log(response.data, "response");
-      
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("status", response.data.status);
-      localStorage.setItem("id", response.data.id);
 
-      navigate("/");
+      console.log(response.data, "response");
+      navigate("/login");
     } catch (error) {
       console.log(error.response.data, "error");
       Swal.fire({
@@ -124,7 +117,7 @@ export default function Login() {
               margin: "0 0 8px 0",
             }}
           >
-            Welcome to ChatCord
+            Join ChatCord
           </h1>
           <p
             style={{
@@ -133,11 +126,52 @@ export default function Login() {
               margin: 0,
             }}
           >
-            Sign in to continue your conversations
+            Create your account to get started
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+        <form onSubmit={hadlesubmit} style={{ width: "100%" }}>
+          <div style={{ marginBottom: "24px" }}>
+            <label
+              style={{
+                display: "block",
+                color: "rgba(255, 255, 255, 0.9)",
+                fontSize: "14px",
+                fontWeight: "500",
+                marginBottom: "8px",
+              }}
+            >
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Choose a username"
+              required
+              style={{
+                width: "100%",
+                padding: "16px 20px",
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                borderRadius: "12px",
+                color: "white",
+                fontSize: "16px",
+                outline: "none",
+                transition: "all 0.3s ease",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#667eea";
+                e.target.style.boxShadow = "0 0 0 4px rgba(102, 126, 234, 0.1)";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.2)";
+                e.target.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
           <div style={{ marginBottom: "24px" }}>
             <label
               style={{
@@ -152,8 +186,8 @@ export default function Login() {
             </label>
             <input
               type="email"
-              onChange={(e) => setEmail(e.target.value)}
               value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
               style={{
@@ -193,9 +227,9 @@ export default function Login() {
             </label>
             <input
               type="password"
-              onChange={(e) => setPassword(e.target.value)}
               value={password}
-              placeholder="Enter your password"
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
               required
               style={{
                 width: "100%",
@@ -244,7 +278,7 @@ export default function Login() {
               e.target.style.boxShadow = "0 8px 24px rgba(102, 126, 234, 0.3)";
             }}
           >
-            Sign In
+            Create Account
           </button>
         </form>
 
@@ -264,12 +298,12 @@ export default function Login() {
               margin: 0,
             }}
           >
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <span
               style={{ color: "#667eea", cursor: "pointer" }}
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/login")}
             >
-              Sign up
+              Sign in
             </span>
           </p>
         </div>
