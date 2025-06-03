@@ -137,87 +137,126 @@ export default function ChatArea({
           flexDirection: "column",
           gap: "20px",
         }}
-      >
-        {messages.map((msg) => (
-          <div key={msg.id} style={{ display: "flex", gap: "12px" }}>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "16px",
-                flexShrink: 0,
-              }}
-            >
-              {msg.avatar || "👤"}
-            </div>
-            <div style={{ flex: 1 }}>
+      >        {Array.isArray(messages) && messages.length > 0 ? (
+        messages.map((msgData) => {
+          // Safety check - skip if message data is invalid
+          if (!msgData || typeof msgData !== 'object') {
+            return null;
+          }
+
+          // Handle new message structure: {message: {...}, timestamp: '...'}
+          const msg = msgData.message || msgData;
+          const timestamp = msgData.timestamp || msg.time || msg.timestamp;
+
+          // Additional safety check for the actual message object
+          if (!msg || typeof msg !== 'object' || !msg.id) {
+            return null;
+          }
+
+          // Format timestamp if available
+          const formattedTime = timestamp ? new Date(timestamp).toLocaleTimeString() : "";
+
+          return (
+            <div key={msg.id} style={{ display: "flex", gap: "12px" }}>
               <div
                 style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "4px",
+                  justifyContent: "center",
+                  fontSize: "16px",
+                  flexShrink: 0,
                 }}
               >
-                <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                  {msg.username}
-                </span>
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "rgba(255, 255, 255, 0.5)",
-                  }}
-                >
-                  {msg.time}
-                </span>
+                {msg.avatar || "👤"}
               </div>
-              <p
-                style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "14px",
-                  lineHeight: "1.5",
-                }}
-              >
-                {msg.message}
-              </p>
-              {msg.attachments && (
+              <div style={{ flex: 1 }}>
                 <div
                   style={{
                     display: "flex",
+                    alignItems: "center",
                     gap: "8px",
-                    marginBottom: "8px",
+                    marginBottom: "4px",
+                  }}
+                >                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    {msg.username ||
+                      msg.user?.username ||
+                      msg.user?.name ||
+                      msgData.username ||
+                      msgData.user?.username ||
+                      msgData.user?.name ||
+                      (msg.userId ? `User ${msg.userId}` : "User")}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: "rgba(255, 255, 255, 0.5)",
+                    }}
+                  >
+                    {formattedTime}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    margin: "0 0 8px 0",
+                    fontSize: "14px",
+                    lineHeight: "1.5",
                   }}
                 >
-                  {msg.attachments.map((att, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "8px",
-                        background: `linear-gradient(135deg, hsl(${
-                          i * 60
-                        }, 70%, 60%) 0%, hsl(${i * 60 + 30}, 70%, 50%) 100%)`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {att}
-                    </div>
-                  ))}
-                </div>
-              )}
+                  {typeof msg.content === 'string' ? msg.content :
+                    typeof msg.message === 'string' ? msg.message :
+                      String(msg.content || msg.message || "")}
+                </p>
+                {msg.attachments && Array.isArray(msg.attachments) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {msg.attachments.map((att, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                          borderRadius: "8px",
+                          background: `linear-gradient(135deg, hsl(${i * 60
+                            }, 70%, 60%) 0%, hsl(${i * 60 + 30}, 70%, 50%) 100%)`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {String(att || "")}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        }).filter(Boolean)
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            color: "rgba(255, 255, 255, 0.5)",
+            fontSize: "14px",
+          }}
+        >
+          No messages yet. Start the conversation!
+        </div>
+      )}
       </div>
 
       {/* Message Input */}

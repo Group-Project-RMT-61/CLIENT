@@ -26,17 +26,56 @@ export default function Home() {
   // Initialize Socket.IO connection
   useEffect(() => {
     if (token) {
-      const socket = socketService.connect(token);
-
-      // Connection status
+      const socket = socketService.connect(token);      // Connection status
       socket.on("connect", () => {
         console.log("Connected to server");
         setIsConnected(true);
       });
 
-      socket.on("disconnect", () => {
-        console.log("Disconnected from server");
+      socket.on("disconnect", (reason) => {
+        console.log("Disconnected from server. Reason:", reason);
         setIsConnected(false);
+
+        // Attempt to reconnect after a short delay
+        if (reason === "io server disconnect") {
+          // Server initiated disconnect, don't reconnect automatically
+          Swal.fire({
+            icon: "warning",
+            title: "Server Disconnected",
+            text: "The server disconnected you. Please refresh the page.",
+            showConfirmButton: true,
+            confirmButtonText: "Refresh Page",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.reload();
+            }
+          });
+        }
+      });
+
+      socket.on("reconnect", (attemptNumber) => {
+        console.log("Reconnected to server after", attemptNumber, "attempts");
+        setIsConnected(true);
+      });
+
+      socket.on("reconnect_attempt", (attemptNumber) => {
+        console.log("Attempting to reconnect... attempt", attemptNumber);
+      });
+
+      socket.on("reconnect_failed", () => {
+        console.log("Failed to reconnect to server");
+        setIsConnected(false);
+        Swal.fire({
+          icon: "error",
+          title: "Connection Failed",
+          text: "Unable to reconnect to the server. Please refresh the page.",
+          showConfirmButton: true,
+          confirmButtonText: "Refresh Page",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.reload();
+          }
+        });
       });
 
       socket.on("connect_error", (error) => {
@@ -113,16 +152,15 @@ export default function Home() {
           status: user.status || "online",
         }));
         setOnlineUsers(formattedUsers);
-      });
-
-      // Listen for user joined
+      });      // Listen for user joined
       socketService.onUserJoined((data) => {
         console.log("User joined:", data);
+        const username = data.username || data.user?.username || data.user?.name || "A user";
         Swal.fire({
           toast: true,
           position: "top-end",
           icon: "info",
-          title: `${data.username} joined the room`,
+          title: `${username} joined the room`,
           showConfirmButton: false,
           timer: 3000,
         });
@@ -131,11 +169,12 @@ export default function Home() {
       // Listen for user left
       socketService.onUserLeft((data) => {
         console.log("User left:", data);
+        const username = data.username || data.user?.username || data.user?.name || "A user";
         Swal.fire({
           toast: true,
           position: "top-end",
           icon: "info",
-          title: `${data.username} left the room`,
+          title: `${username} left the room`,
           showConfirmButton: false,
           timer: 3000,
         });
@@ -168,27 +207,50 @@ export default function Home() {
       console.log(`Joining room: ${room.name} (${room.id})`);
     }
   };
-
   const sendMessage = (e) => {
     e.preventDefault();
-    if (
-      !newMessage.trim() ||
-      !selectedRoom ||
-      !socketService.isSocketConnected()
-    ) {
-      if (!socketService.isSocketConnected()) {
-        Swal.fire({
-          icon: "error",
-          title: "Connection Error",
-          text: "Not connected to chat server",
-        });
-      }
+    if (!newMessage.trim() || !selectedRoom) {
       return;
     }
 
-    // Send message via Socket.IO
-    socketService.sendMessage(selectedRoom.id, newMessage.trim());
-    setNewMessage("");
+    // Check connection status more thoroughly
+    const isSocketReady = socketService.isSocketConnected();
+    const socketInstance = socketService.getSocket();
+
+    if (!isSocketReady || !socketInstance || !socketInstance.connected) {
+      console.error("Socket not connected. Socket status:", {
+        isSocketReady,
+        hasSocketInstance: !!socketInstance,
+        socketConnected: socketInstance?.connected,
+        reactIsConnected: isConnected
+      });
+
+      Swal.fire({
+        icon: "error",
+        title: "Connection Error",
+        text: "Not connected to chat server. Please refresh the page.",
+        showConfirmButton: true,
+        confirmButtonText: "Refresh Page",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.reload();
+        }
+      });
+      return;
+    }
+
+    try {
+      // Send message via Socket.IO
+      socketService.sendMessage(selectedRoom.id, newMessage.trim());
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to Send Message",
+        text: "There was an error sending your message. Please try again.",
+      });
+    }
   };
 
   const leaveRoom = () => {

@@ -6,37 +6,35 @@ class SocketService {
     this.isConnected = false;
     this.serverUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
   }
-
   connect(token) {
     if (this.socket && this.isConnected) {
       return this.socket;
     }
 
-    console.log(`Attempting to connect to server at: ${this.serverUrl}`);
-
-    // Connect to the server with authentication
+    console.log(`Attempting to connect to server at: ${this.serverUrl}`);    // Connect to the server with authentication
     this.socket = io(this.serverUrl, {
       auth: {
         token: token,
       },
       transports: ["websocket", "polling"],
-      timeout: 5000,
+      timeout: 10000,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: 5,
       forceNew: true,
     });
 
-    // Connection events
+    // Only set up internal connection status tracking
     this.socket.on("connect", () => {
-      console.log("Connected to server");
       this.isConnected = true;
     });
 
     this.socket.on("disconnect", () => {
-      console.log("Disconnected from server");
       this.isConnected = false;
     });
 
-    this.socket.on("connect_error", (error) => {
-      console.error("Connection error:", error);
+    this.socket.on("connect_error", () => {
       this.isConnected = false;
     });
 
@@ -63,14 +61,28 @@ class SocketService {
       this.socket.emit("leave_room", { roomId });
     }
   }
-
   // Message handling
   sendMessage(roomId, content) {
-    if (this.socket && this.isConnected) {
+    if (!this.socket) {
+      console.error("Socket not initialized");
+      return false;
+    }
+    
+    if (!this.isConnected || !this.socket.connected) {
+      console.error("Socket not connected. Attempting to reconnect...");
+      this.socket.connect();
+      return false;
+    }
+
+    try {
       this.socket.emit("send_message", {
         roomId,
         content,
       });
+      return true;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      return false;
     }
   }
 
