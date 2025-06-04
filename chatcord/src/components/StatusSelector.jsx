@@ -17,47 +17,68 @@ export default function StatusSelector({ currentStatus, onStatusChange }) {
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", minWidth: "120px" }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          background: "none",
-          border: "none",
+          background: "rgba(40,44,52,0.7)",
+          border: "1.5px solid rgba(147,112,219,0.18)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           gap: "8px",
-          padding: "4px 8px",
-          borderRadius: "4px",
-          transition: "background-color 0.2s",
+          padding: "7px 14px",
+          borderRadius: "8px",
           color: "white",
-          fontSize: "12px",
+          fontSize: "13px",
+          fontWeight: 500,
+          boxShadow: isOpen
+            ? "0 4px 16px rgba(147,112,219,0.12)"
+            : "0 1px 4px rgba(0,0,0,0.08)",
+          transition: "background 0.2s, box-shadow 0.2s",
+          outline: isOpen ? "2px solid #b19cd9" : "none",
         }}
         onMouseEnter={(e) => {
-          e.target.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+          e.target.style.background = "rgba(147,112,219,0.13)";
         }}
         onMouseLeave={(e) => {
-          e.target.style.backgroundColor = "transparent";
+          e.target.style.background = "rgba(40,44,52,0.7)";
         }}
       >
         <UserStatusIndicator status={currentStatus} size="small" />
         <span style={{ textTransform: "capitalize" }}>{currentStatus}</span>
-        <span style={{ marginLeft: "4px" }}>▼</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 20 20"
+          fill="none"
+          style={{ marginLeft: 2 }}
+        >
+          <path
+            d="M6 8l4 4 4-4"
+            stroke="#b19cd9"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
 
       {isOpen && (
         <div
           style={{
             position: "absolute",
-            top: "100%",
+            top: "110%",
             left: 0,
-            right: 0,
-            backgroundColor: "#2f3136",
-            border: "1px solid #40444b",
-            borderRadius: "4px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+            minWidth: "140px",
+            background: "rgba(40,44,52,0.97)",
+            border: "1.5px solid #b19cd9",
+            borderRadius: "10px",
+            boxShadow: "0 8px 32px rgba(147,112,219,0.18)",
             zIndex: 1000,
-            marginTop: "4px",
+            marginTop: "6px",
+            backdropFilter: "blur(8px)",
+            overflow: "hidden",
           }}
         >
           {statusOptions.map((option) => (
@@ -68,21 +89,23 @@ export default function StatusSelector({ currentStatus, onStatusChange }) {
                 width: "100%",
                 background: "none",
                 border: "none",
-                padding: "8px 12px",
+                padding: "10px 16px",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "10px",
                 cursor: "pointer",
                 color: "white",
-                fontSize: "12px",
+                fontSize: "13px",
+                fontWeight: 500,
                 borderRadius: "0",
-                transition: "background-color 0.2s",
+                transition: "background 0.18s",
+                textAlign: "left",
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                e.target.style.background = "rgba(147,112,219,0.10)";
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "transparent";
+                e.target.style.background = "none";
               }}
             >
               <UserStatusIndicator status={option.value} size="small" />
