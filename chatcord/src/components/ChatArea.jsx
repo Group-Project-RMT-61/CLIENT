@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import http from "../lib/http";
 
 export default function ChatArea({
   currentRoom,
@@ -17,36 +17,16 @@ export default function ChatArea({
 
   const generateAISummary = async () => {
     if (!currentRoom || isLoadingSummary) return;
-
     setIsLoadingSummary(true);
-    setSummaryText("");    try {
-      const token = localStorage.getItem("access_token");
-      
-      if (!token) {
-        setSummaryText("Please log in to use AI Summary feature.");
-        setShowSummary(true);
-        return;
-      }
-      
-      const response = await axios.post(
-        `http://localhost:3000/api/rooms/${currentRoom.id}/ai/response`,
-        {
-          prompt:
-            "Please provide a simple summary of what these users are talking about in this chat room. Keep it conversational and plain text without emojis or special formatting.",
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
+    setSummaryText("");
+    try {
+      const response = await http.post(`/rooms/${currentRoom.id}/ai/summary`);
       if (response.data && response.data.data) {
         // Clean up the response text - remove emojis and excessive formatting
         let cleanText =
           response.data.data.content ||
-          response.data.data.response ||
+          response.data.data.summary ||
+          response.data.message ||
           "No summary available";
 
         // Remove emojis and special characters
@@ -63,19 +43,24 @@ export default function ChatArea({
 
         setSummaryText(cleanText);
         setShowSummary(true);
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error("Error generating AI summary:", error);
-      
+
       if (error.response?.status === 401) {
-        setSummaryText("Authentication failed. Please log in again to use AI Summary.");
+        setSummaryText(
+          "Authentication failed. Please log in again to use AI Summary."
+        );
       } else if (error.response?.status === 404) {
         setSummaryText("AI service not available. Please try again later.");
       } else if (error.response?.data?.message) {
         setSummaryText(`Error: ${error.response.data.message}`);
       } else {
-        setSummaryText("Sorry, unable to generate summary at this time. Please try again.");
+        setSummaryText(
+          "Sorry, unable to generate summary at this time. Please try again."
+        );
       }
-      
+
       setShowSummary(true);
     } finally {
       setIsLoadingSummary(false);
