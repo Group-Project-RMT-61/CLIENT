@@ -1,5 +1,6 @@
 import { useState } from "react";
 import http from "../lib/http";
+import UserStatusIndicator from "./UserStatusIndicator";
 
 export default function ChatArea({
   currentRoom,
@@ -255,23 +256,60 @@ export default function ChatArea({
                         : "none",
                   }}
                 >
+                  {" "}
                   <div
                     style={{
+                      position: "relative",
                       width: "40px",
                       height: "40px",
-                      borderRadius: "50%",
-                      background:
-                        msg.isAI || msgData.isAI
-                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                          : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "16px",
                       flexShrink: 0,
                     }}
                   >
-                    {msg.isAI || msgData.isAI ? "🤖" : msg.avatar || "👤"}
+                    <div
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        background:
+                          msg.isAI || msgData.isAI
+                            ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                            : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "16px",
+                      }}
+                    >
+                      {msg.isAI || msgData.isAI ? "🤖" : msg.avatar || "👤"}
+                    </div>
+                    {/* Status indicator for non-AI users */}
+                    {!(msg.isAI || msgData.isAI) && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "-2px",
+                          right: "-2px",
+                        }}
+                      >
+                        <UserStatusIndicator
+                          status={
+                            msg.user?.status ||
+                            msg.status ||
+                            msgData.user?.status ||
+                            msgData.status ||
+                            onlineUsers?.find(
+                              (u) =>
+                                u.id === msg.userId ||
+                                u.id === msg.user?.id ||
+                                u.username === msg.username ||
+                                u.username === msg.user?.username
+                            )?.status ||
+                            "offline"
+                          }
+                          size="small"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div

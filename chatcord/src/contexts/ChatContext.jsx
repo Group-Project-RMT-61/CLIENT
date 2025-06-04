@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import socketService from "../lib/socket";
 import Swal from "sweetalert2";
 
@@ -121,24 +128,59 @@ export const ChatProvider = ({ children }) => {
           isAI: msg.isAI || false,
         }));
         setMessages(formattedMessages);
-      });
-
-      // Listen for users updates
+      }); // Listen for users updates - Enhanced for real-time room member tracking
       socketService.onUsersUpdate((users) => {
         console.log("Users update received:", users);
         const formattedUsers = users.map((user) => ({
           ...user,
           avatar: user.username ? user.username.charAt(0).toUpperCase() : "👤",
           status: user.status || "online",
+          lastSeen: user.lastSeen || new Date(),
+          isOnline: user.status !== "offline",
+          // Add room context if available
+          currentRoom: user.currentRoom || null,
         }));
         setOnlineUsers(formattedUsers);
       });
 
-      // Listen for user joined
+      // Listen for user joined - Enhanced to update online users immediately
       socketService.onUserJoined((data) => {
         console.log("User joined:", data);
         const username =
           data.username || data.user?.username || data.user?.name || "A user";
+
+        // Add user to online users list immediately
+        if (data.user) {
+          setOnlineUsers((prevUsers) => {
+            const existingUser = prevUsers.find((u) => u.id === data.user.id);
+            if (!existingUser) {
+              const newUser = {
+                ...data.user,
+                avatar: data.user.username
+                  ? data.user.username.charAt(0).toUpperCase()
+                  : "👤",
+                status: data.user.status || "online",
+                lastSeen: new Date(),
+                isOnline: true,
+                currentRoom: data.roomId || null,
+              };
+              return [...prevUsers, newUser];
+            } else {
+              // Update existing user's status to online
+              return prevUsers.map((u) =>
+                u.id === data.user.id
+                  ? {
+                      ...u,
+                      isOnline: true,
+                      status: "online",
+                      currentRoom: data.roomId || null,
+                    }
+                  : u
+              );
+            }
+          });
+        }
+
         Swal.fire({
           toast: true,
           position: "top-end",
@@ -162,9 +204,63 @@ export const ChatProvider = ({ children }) => {
           showConfirmButton: false,
           timer: 3000,
         });
-      });      return socket;
+      });
+      return socket;
     }
   }, []);
+  // Simulate realistic user statuses for demo purposes
+  // Commented out unused function to fix linting errors
+  // const simulateUserStatuses = useCallback((users) => {
+  //   const statusOptions = ["online", "idle", "dnd", "offline"];
+  //   return users.map((user, index) => {
+  //     // Assign different statuses to make it look realistic
+  //     let status;
+  //     switch (index % 4) {
+  //       case 0:
+  //         status = "online";
+  //         break;
+  //       case 1:
+  //         status = "idle";
+  //         break;
+  //       case 2:
+  //         status = "dnd";
+  //         break;
+  //       default:
+  //         status = "offline";
+  //     }
+
+  //     return {
+  //       ...user,
+  //       status: user.status || status,
+  //       lastSeen:
+  //         user.lastSeen || new Date(Date.now() - Math.random() * 3600000), // Random time within last hour
+  //       isOnline: status !== "offline",
+  //     };
+  //   });
+  // }, []);
+
+  // Enhanced users update with better status handling
+  useEffect(() => {
+    // If we have online users but no status info, simulate statuses
+    if (onlineUsers.length > 0) {
+      const usersWithStatuses = onlineUsers.map((user) => ({
+        ...user,
+        status: user.status || "online", // Default to online if no status
+        lastSeen: user.lastSeen || new Date(),
+        isOnline: user.status !== "offline",
+      }));
+
+      // Only update if the statuses actually changed
+      const hasChanges = usersWithStatuses.some(
+        (user, index) =>
+          !onlineUsers[index] || onlineUsers[index].status !== user.status
+      );
+
+      if (hasChanges) {
+        setOnlineUsers(usersWithStatuses);
+      }
+    }
+  }, [onlineUsers.length]);
 
   const handleRoomSelect = (room) => {
     // Leave previous room if any

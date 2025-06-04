@@ -5,7 +5,8 @@ class SocketService {
     this.socket = null;
     this.isConnected = false;
     this.serverUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
-  }  connect(token) {
+  }
+  connect(token) {
     // If socket is already connected and working, return it
     if (this.socket && this.isConnected && this.socket.connected) {
       console.log("Socket already connected, reusing existing connection");
@@ -19,7 +20,7 @@ class SocketService {
     }
 
     console.log(`Attempting to connect to server at: ${this.serverUrl}`);
-    
+
     // Connect to the server with authentication
     this.socket = io(this.serverUrl, {
       auth: {
@@ -76,7 +77,7 @@ class SocketService {
       console.error("Socket not initialized");
       return false;
     }
-    
+
     if (!this.isConnected || !this.socket.connected) {
       console.error("Socket not connected. Attempting to reconnect...");
       this.socket.connect();

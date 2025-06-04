@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import http from "../lib/http";
 import Swal from "sweetalert2";
-import { useAuth, useRooms } from "../contexts";
+import { useAuth, useRooms, useUsers } from "../contexts";
+import UserStatusIndicator from "./UserStatusIndicator";
+import StatusSelector from "./StatusSelector";
 
 export default function SidebarDiscord({
   onRoomSelect,
@@ -11,9 +13,11 @@ export default function SidebarDiscord({
 }) {
   const { user } = useAuth();
   const { rooms, loading: roomsLoading, fetchRooms, createRoom } = useRooms();
+  const { changeUserStatus } = useUsers();
 
   // Get user data from context instead of localStorage
   const username = user?.username || "User";
+  const userStatus = user?.status || "online";
 
   // Get user's initials from username
   const getUserInitials = (name) => {
@@ -274,7 +278,7 @@ export default function SidebarDiscord({
           }}
         >
           Online Users — {onlineUsers.length}
-        </div>
+        </div>{" "}
         <div style={{ overflow: "auto", paddingBottom: "8px" }}>
           {onlineUsers.map((user) => (
             <div
@@ -288,6 +292,7 @@ export default function SidebarDiscord({
             >
               <div
                 style={{
+                  position: "relative",
                   width: "32px",
                   height: "32px",
                   borderRadius: "50%",
@@ -302,6 +307,16 @@ export default function SidebarDiscord({
                 }}
               >
                 {user.avatar || getUserInitials(user.username)}
+                {/* Status indicator positioned at bottom-right */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "-2px",
+                    right: "-2px",
+                  }}
+                >
+                  <UserStatusIndicator status={user.status} size="medium" />
+                </div>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -322,9 +337,15 @@ export default function SidebarDiscord({
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
                   }}
                 >
-                  {user.status || "online"}
+                  <UserStatusIndicator
+                    status={user.status}
+                    showText={true}
+                    size="small"
+                  />
                 </div>
               </div>
             </div>
@@ -343,6 +364,7 @@ export default function SidebarDiscord({
           justifyContent: "space-between",
         }}
       >
+        {" "}
         <div
           style={{
             display: "flex",
@@ -353,6 +375,7 @@ export default function SidebarDiscord({
         >
           <div
             style={{
+              position: "relative",
               width: "32px",
               height: "32px",
               borderRadius: "50%",
@@ -366,7 +389,18 @@ export default function SidebarDiscord({
               marginRight: "8px",
             }}
           >
+            {" "}
             {initials}
+            {/* Current user status indicator */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: "-2px",
+                right: "-2px",
+              }}
+            >
+              <UserStatusIndicator status={userStatus} size="medium" />
+            </div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
@@ -385,13 +419,17 @@ export default function SidebarDiscord({
               style={{
                 fontSize: "12px",
                 color: "#8e9297",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              online
+              <StatusSelector
+                currentStatus={userStatus}
+                onStatusChange={changeUserStatus}
+              />
             </div>
           </div>
         </div>
-
         {/* Logout Button */}
         <button
           onClick={onLogout}
