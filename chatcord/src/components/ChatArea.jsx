@@ -1,3 +1,6 @@
+import { useState } from "react";
+import http from "../lib/http";
+
 export default function ChatArea({
   currentRoom,
   messages,
@@ -8,6 +11,62 @@ export default function ChatArea({
   leaveRoom,
   isConnected,
 }) {
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
+  const [showSummary, setShowSummary] = useState(false);
+
+  const generateAISummary = async () => {
+    if (!currentRoom || isLoadingSummary) return;
+    setIsLoadingSummary(true);
+    setSummaryText("");
+    try {
+      const response = await http.post(`/rooms/${currentRoom.id}/ai/summary`);
+      if (response.data && response.data.data) {
+        // Clean up the response text - remove emojis and excessive formatting
+        let cleanText =
+          response.data.data.content ||
+          response.data.data.summary ||
+          response.data.message ||
+          "No summary available";
+
+        // Remove emojis and special characters
+        cleanText = cleanText.replace(
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
+          ""
+        );
+
+        // Remove markdown formatting
+        cleanText = cleanText.replace(/[*#_~`]/g, "");
+
+        // Remove multiple spaces and normalize
+        cleanText = cleanText.replace(/\s+/g, " ").trim();
+
+        setSummaryText(cleanText);
+        setShowSummary(true);
+      }
+    } catch (error) {
+      console.error("Error generating AI summary:", error);
+
+      if (error.response?.status === 401) {
+        setSummaryText(
+          "Authentication failed. Please log in again to use AI Summary."
+        );
+      } else if (error.response?.status === 404) {
+        setSummaryText("AI service not available. Please try again later.");
+      } else if (error.response?.data?.message) {
+        setSummaryText(`Error: ${error.response.data.message}`);
+      } else {
+        setSummaryText(
+          "Sorry, unable to generate summary at this time. Please try again."
+        );
+      }
+
+      setShowSummary(true);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
   if (!currentRoom) {
     return (
       <div
@@ -109,24 +168,42 @@ export default function ChatArea({
                 • Disconnected
               </span>
             )}
-          </p>
+          </p>{" "}
+        </div>{" "}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={generateAISummary}
+            disabled={isLoadingSummary}
+            style={{
+              background: isLoadingSummary
+                ? "rgba(255, 255, 255, 0.05)"
+                : "rgba(59, 130, 246, 0.2)",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              color: isLoadingSummary ? "rgba(255, 255, 255, 0.5)" : "#60a5fa",
+              cursor: isLoadingSummary ? "not-allowed" : "pointer",
+              fontSize: "14px",
+            }}
+          >
+            {isLoadingSummary ? "Generating..." : "AI Summary"}
+          </button>
+          <button
+            onClick={() => leaveRoom(currentRoom.id)}
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "14px",
+            }}
+          >
+            Leave Room
+          </button>
         </div>
-        <button
-          onClick={() => leaveRoom(currentRoom.id)}
-          style={{
-            background: "rgba(255, 255, 255, 0.1)",
-            border: "none",
-            borderRadius: "8px",
-            padding: "8px 16px",
-            color: "white",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Leave Room
-        </button>
       </div>
-
       {/* Messages Area */}
       <div
         style={{
@@ -137,128 +214,180 @@ export default function ChatArea({
           flexDirection: "column",
           gap: "20px",
         }}
-      >        {Array.isArray(messages) && messages.length > 0 ? (
-        messages.map((msgData) => {
-          // Safety check - skip if message data is invalid
-          if (!msgData || typeof msgData !== 'object') {
-            return null;
-          }
+      >
+        {" "}
+        {Array.isArray(messages) && messages.length > 0 ? (
+          messages
+            .map((msgData) => {
+              // Safety check - skip if message data is invalid
+              if (!msgData || typeof msgData !== "object") {
+                return null;
+              }
 
-          // Handle new message structure: {message: {...}, timestamp: '...'}
-          const msg = msgData.message || msgData;
-          const timestamp = msgData.timestamp || msg.time || msg.timestamp;
+              // Handle new message structure: {message: {...}, timestamp: '...'}
+              const msg = msgData.message || msgData;
+              const timestamp = msgData.timestamp || msg.time || msg.timestamp;
 
-          // Additional safety check for the actual message object
-          if (!msg || typeof msg !== 'object' || !msg.id) {
-            return null;
-          }
+              // Additional safety check for the actual message object
+              if (!msg || typeof msg !== "object" || !msg.id) {
+                return null;
+              }
 
-          // Format timestamp if available
-          const formattedTime = timestamp ? new Date(timestamp).toLocaleTimeString() : "";
-
-          return (
-            <div key={msg.id} style={{ display: "flex", gap: "12px" }}>
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "16px",
-                  flexShrink: 0,
-                }}
-              >
-                {msg.avatar || "👤"}
-              </div>
-              <div style={{ flex: 1 }}>
+              // Format timestamp if available
+              const formattedTime = timestamp
+                ? new Date(timestamp).toLocaleTimeString()
+                : "";
+              return (
                 <div
+                  key={msg.id}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "4px",
-                  }}
-                >                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    {msg.username ||
-                      msg.user?.username ||
-                      msg.user?.name ||
-                      msgData.username ||
-                      msgData.user?.username ||
-                      msgData.user?.name ||
-                      (msg.userId ? `User ${msg.userId}` : "User")}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "rgba(255, 255, 255, 0.5)",
-                    }}
-                  >
-                    {formattedTime}
-                  </span>
-                </div>
-                <p
-                  style={{
-                    margin: "0 0 8px 0",
-                    fontSize: "14px",
-                    lineHeight: "1.5",
+                    gap: "12px",
+                    backgroundColor:
+                      msg.isAI || msgData.isAI
+                        ? "rgba(102, 126, 234, 0.1)"
+                        : "transparent",
+                    borderRadius: msg.isAI || msgData.isAI ? "8px" : "0",
+                    padding: msg.isAI || msgData.isAI ? "12px" : "0",
+                    border:
+                      msg.isAI || msgData.isAI
+                        ? "1px solid rgba(102, 126, 234, 0.3)"
+                        : "none",
                   }}
                 >
-                  {typeof msg.content === 'string' ? msg.content :
-                    typeof msg.message === 'string' ? msg.message :
-                      String(msg.content || msg.message || "")}
-                </p>
-                {msg.attachments && Array.isArray(msg.attachments) && (
                   <div
                     style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background:
+                        msg.isAI || msgData.isAI
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                          : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       display: "flex",
-                      gap: "8px",
-                      marginBottom: "8px",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "16px",
+                      flexShrink: 0,
                     }}
                   >
-                    {msg.attachments.map((att, i) => (
-                      <div
-                        key={i}
+                    {msg.isAI || msgData.isAI ? "🤖" : msg.avatar || "👤"}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {" "}
+                      <span
                         style={{
-                          width: "60px",
-                          height: "60px",
-                          borderRadius: "8px",
-                          background: `linear-gradient(135deg, hsl(${i * 60
-                            }, 70%, 60%) 0%, hsl(${i * 60 + 30}, 70%, 50%) 100%)`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
                           fontWeight: "600",
+                          fontSize: "14px",
+                          color: msg.isAI || msgData.isAI ? "#667eea" : "white",
                         }}
                       >
-                        {String(att || "")}
+                        {msg.isAI || msgData.isAI
+                          ? "🤖 AI Assistant"
+                          : msg.username ||
+                            msg.user?.username ||
+                            msg.user?.name ||
+                            msgData.username ||
+                            msgData.user?.username ||
+                            msgData.user?.name ||
+                            (msg.userId ? `User ${msg.userId}` : "User")}
+                      </span>
+                      {(msg.isAI || msgData.isAI) && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            backgroundColor: "#667eea",
+                            color: "white",
+                            padding: "2px 6px",
+                            borderRadius: "10px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          AI
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "rgba(255, 255, 255, 0.5)",
+                        }}
+                      >
+                        {formattedTime}
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        margin: "0 0 8px 0",
+                        fontSize: "14px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      {typeof msg.content === "string"
+                        ? msg.content
+                        : typeof msg.message === "string"
+                        ? msg.message
+                        : String(msg.content || msg.message || "")}
+                    </p>
+                    {msg.attachments && Array.isArray(msg.attachments) && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        {msg.attachments.map((att, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              borderRadius: "8px",
+                              background: `linear-gradient(135deg, hsl(${
+                                i * 60
+                              }, 70%, 60%) 0%, hsl(${
+                                i * 60 + 30
+                              }, 70%, 50%) 100%)`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                            }}
+                          >
+                            {String(att || "")}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        }).filter(Boolean)
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            color: "rgba(255, 255, 255, 0.5)",
-            fontSize: "14px",
-          }}
-        >
-          No messages yet. Start the conversation!
-        </div>
-      )}
+                </div>
+              );
+            })
+            .filter(Boolean)
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "rgba(255, 255, 255, 0.5)",
+              fontSize: "14px",
+            }}
+          >
+            No messages yet. Start the conversation!
+          </div>
+        )}
       </div>
-
       {/* Message Input */}
       <div
         style={{
@@ -336,7 +465,105 @@ export default function ChatArea({
             ⚠️ Chat is unavailable - check your connection
           </div>
         )}
-      </div>
+      </div>{" "}
+      {/* AI Summary Modal */}
+      {showSummary && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSummary(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "500px",
+              width: "100%",
+              maxHeight: "70vh",
+              overflowY: "auto",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                margin: "0 0 16px 0",
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "white",
+              }}
+            >
+              Chat Summary
+            </h3>
+            <p
+              style={{
+                color: "rgba(255, 255, 255, 0.8)",
+                fontSize: "14px",
+                lineHeight: "1.6",
+                margin: "0 0 20px 0",
+              }}
+            >
+              {summaryText || "No summary available."}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "8px",
+              }}
+            >
+              <button
+                onClick={generateAISummary}
+                disabled={isLoadingSummary}
+                style={{
+                  padding: "10px 16px",
+                  background: isLoadingSummary
+                    ? "rgba(59, 130, 246, 0.3)"
+                    : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: isLoadingSummary ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  opacity: isLoadingSummary ? 0.6 : 1,
+                }}
+              >
+                {isLoadingSummary ? "Generating..." : "Refresh"}
+              </button>
+              <button
+                onClick={() => setShowSummary(false)}
+                style={{
+                  padding: "10px 16px",
+                  background: "rgba(255, 255, 255, 0.1)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

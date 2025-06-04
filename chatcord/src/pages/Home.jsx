@@ -26,7 +26,7 @@ export default function Home() {
   // Initialize Socket.IO connection
   useEffect(() => {
     if (token) {
-      const socket = socketService.connect(token);      // Connection status
+      const socket = socketService.connect(token); // Connection status
       socket.on("connect", () => {
         console.log("Connected to server");
         setIsConnected(true);
@@ -109,9 +109,7 @@ export default function Home() {
             window.location.href = "/status";
           }
         });
-      });
-
-      // Listen for new messages
+      }); // Listen for new messages
       socketService.onMessage((data) => {
         console.log("New message received:", data);
         setMessages((prevMessages) => [
@@ -124,11 +122,10 @@ export default function Home() {
             avatar: data.user?.username
               ? data.user.username.charAt(0).toUpperCase()
               : "👤",
+            isAI: data.isAI || false,
           },
         ]);
-      });
-
-      // Listen for room messages when joining a room
+      }); // Listen for room messages when joining a room
       socketService.onRoomMessages((data) => {
         console.log("Room messages received:", data);
         const formattedMessages = data.map((msg) => ({
@@ -139,6 +136,7 @@ export default function Home() {
           avatar: msg.user?.username
             ? msg.user.username.charAt(0).toUpperCase()
             : "👤",
+          isAI: msg.isAI || false,
         }));
         setMessages(formattedMessages);
       });
@@ -152,10 +150,11 @@ export default function Home() {
           status: user.status || "online",
         }));
         setOnlineUsers(formattedUsers);
-      });      // Listen for user joined
+      }); // Listen for user joined
       socketService.onUserJoined((data) => {
         console.log("User joined:", data);
-        const username = data.username || data.user?.username || data.user?.name || "A user";
+        const username =
+          data.username || data.user?.username || data.user?.name || "A user";
         Swal.fire({
           toast: true,
           position: "top-end",
@@ -169,7 +168,8 @@ export default function Home() {
       // Listen for user left
       socketService.onUserLeft((data) => {
         console.log("User left:", data);
-        const username = data.username || data.user?.username || data.user?.name || "A user";
+        const username =
+          data.username || data.user?.username || data.user?.name || "A user";
         Swal.fire({
           toast: true,
           position: "top-end",
@@ -222,7 +222,7 @@ export default function Home() {
         isSocketReady,
         hasSocketInstance: !!socketInstance,
         socketConnected: socketInstance?.connected,
-        reactIsConnected: isConnected
+        reactIsConnected: isConnected,
       });
 
       Swal.fire({
@@ -289,34 +289,41 @@ export default function Home() {
         color: "white",
       }}
     >
-      {/* Connection Status Indicator */}
+      {/* Connection Status and AI Test Toggle */}
       <div
         style={{
           position: "fixed",
           top: "10px",
           right: "10px",
-          background: isConnected ? "#22c55e" : "#ef4444",
-          color: "white",
-          padding: "8px 12px",
-          borderRadius: "6px",
-          fontSize: "12px",
-          fontWeight: "500",
-          zIndex: 1000,
           display: "flex",
-          alignItems: "center",
-          gap: "6px",
+          gap: "8px",
+          zIndex: 1000,
         }}
       >
         <div
           style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            backgroundColor: "white",
-            animation: isConnected ? "none" : "pulse 2s infinite",
+            background: isConnected ? "#22c55e" : "#ef4444",
+            color: "white",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            fontSize: "12px",
+            fontWeight: "500",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
           }}
-        />
-        {isConnected ? "Connected" : "Disconnected"}
+        >
+          <div
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              backgroundColor: "white",
+              animation: isConnected ? "none" : "pulse 2s infinite",
+            }}
+          />{" "}
+          {isConnected ? "Connected" : "Disconnected"}
+        </div>
       </div>
 
       <div
