@@ -39,91 +39,100 @@ export const RoomProvider = ({ children }) => {
 
   // Set up real-time event listeners
   useEffect(() => {
-    const handleRoomCreated = (data) => {
-      console.log("Room created:", data.room);
-      setRooms(prevRooms => [...prevRooms, data.room]);
-      
-      // Show notification
-      Swal.fire({
-        icon: "info",
-        title: "New Room Created",
-        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
-        timer: 3000,
-        showConfirmButton: false,
-        toast: true,
-        position: "top-end"
-      });
+    let cleanupFunction = null;
+    let retryCount = 0;
+    const maxRetries = 10;
+
+    const setupEventListeners = () => {
+      const handleRoomCreated = (data) => {
+        console.log("Room created event received:", data);
+        console.log("New room data:", data.room);
+        setRooms(prevRooms => {
+          // Check if room already exists to avoid duplicates
+          const roomExists = prevRooms.find(room => room.id === data.room.id);
+          if (roomExists) {
+            console.log("Room already exists, skipping duplicate");
+            return prevRooms;
+          }
+          console.log("Adding new room to list");
+          return [...prevRooms, data.room];
+        });
+        
+        // Show notification
+        Swal.fire({
+          icon: "info",
+          title: "New Room Created",
+          text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+          timer: 3000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end"
+        });
+      };
+
+      const handleRoomRemoved = (data) => {
+        console.log("Room removed event received:", data);
+        console.log("Room ID to remove:", data.roomId, typeof data.roomId);
+        setRooms(prevRooms => {
+          console.log("Current rooms before filtering:", prevRooms.map(r => ({id: r.id, name: r.name})));
+          const updatedRooms = prevRooms.filter(room => {
+            const shouldKeep = room.id !== data.roomId;
+            console.log(`Room ${room.id} (${room.name}): keep=${shouldKeep}`);
+            return shouldKeep;
+          });
+          console.log("Rooms after removal:", updatedRooms.map(r => ({id: r.id, name: r.name})));
+          return updatedRooms;
+        });
+        
+        // Show notification
+        Swal.fire({
+          icon: "warning",
+          title: "Room Deleted",
+          text: "A room has been deleted",
+          timer: 3000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end"
+        });
+      };
+
+      // Add socket event listeners
+      console.log("Setting up room event listeners");
+      socketService.onRoomCreated(handleRoomCreated);
+      socketService.onRoomRemoved(handleRoomRemoved);
+
+      return () => {
+        console.log("Cleaning up room event listeners");
+        socketService.off("room_created", handleRoomCreated);
+        socketService.off("room_removed", handleRoomRemoved);
+      };
     };
 
-    const handleRoomRemoved = (data) => {
-      console.log("Room removed:", data.roomId);
-      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
-      
-      // Show notification
-      Swal.fire({
-        icon: "warning",
-        title: "Room Deleted",
-        text: "A room has been deleted",
-        timer: 3000,
-        showConfirmButton: false,
-        toast: true,
-        position: "top-end"
-      });
+    // Check if socket is connected, if not wait a bit and try again
+    const trySetupListeners = () => {
+      if (socketService.isSocketConnected()) {
+        console.log("Socket is connected, setting up room event listeners");
+        cleanupFunction = setupEventListeners();
+      } else {
+        retryCount++;
+        if (retryCount <= maxRetries) {
+          console.log(`Socket not connected yet, retrying... (${retryCount}/${maxRetries})`);
+          setTimeout(trySetupListeners, 1000);
+        } else {
+          console.warn("Max retries reached, setting up listeners anyway");
+          cleanupFunction = setupEventListeners();
+        }
+      }
     };
 
-    // Add socket event listeners
-    socketService.onRoomCreated(handleRoomCreated);
-    socketService.onRoomRemoved(handleRoomRemoved);
+    // Start trying to setup listeners
+    trySetupListeners();
 
-    // Cleanup listeners on unmount
+    // Cleanup function
     return () => {
-      socketService.off("room_created", handleRoomCreated);
-      socketService.off("room_removed", handleRoomRemoved);
-    };
-  }, []);
-
-  // Set up real-time event listeners
-  useEffect(() => {
-    const handleRoomCreated = (data) => {
-      console.log("Room created:", data.room);
-      setRooms(prevRooms => [...prevRooms, data.room]);
-      
-      // Show notification
-      Swal.fire({
-        icon: "info",
-        title: "New Room Created",
-        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
-        timer: 3000,
-        showConfirmButton: false,
-        toast: true,
-        position: "top-end"
-      });
-    };
-
-    const handleRoomRemoved = (data) => {
-      console.log("Room removed:", data.roomId);
-      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
-      
-      // Show notification
-      Swal.fire({
-        icon: "warning",
-        title: "Room Deleted",
-        text: "A room has been deleted",
-        timer: 3000,
-        showConfirmButton: false,
-        toast: true,
-        position: "top-end"
-      });
-    };
-
-    // Add socket event listeners
-    socketService.onRoomCreated(handleRoomCreated);
-    socketService.onRoomRemoved(handleRoomRemoved);
-
-    // Cleanup listeners on unmount
-    return () => {
-      socketService.off("room_created", handleRoomCreated);
-      socketService.off("room_removed", handleRoomRemoved);
+      if (cleanupFunction) {
+        cleanupFunction();
+      }
     };
   }, []);
 

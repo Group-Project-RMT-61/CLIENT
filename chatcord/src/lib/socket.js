@@ -142,19 +142,28 @@ class SocketService {
   // Room management events
   onRoomCreated(callback) {
     if (this.socket) {
+      console.log("Registering room_created event listener");
       this.socket.on("room_created", callback);
+    } else {
+      console.warn("Socket not initialized for room_created listener");
     }
   }
 
   onRoomDeleted(callback) {
     if (this.socket) {
+      console.log("Registering room_deleted event listener");
       this.socket.on("room_deleted", callback);
+    } else {
+      console.warn("Socket not initialized for room_deleted listener");
     }
   }
 
   onRoomRemoved(callback) {
     if (this.socket) {
+      console.log("Registering room_removed event listener");
       this.socket.on("room_removed", callback);
+    } else {
+      console.warn("Socket not initialized for room_removed listener");
     }
   }
 
