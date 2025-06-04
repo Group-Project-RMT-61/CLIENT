@@ -22,9 +22,9 @@ export const AuthProvider = ({ children }) => {
     const id = localStorage.getItem("id");
     const status = localStorage.getItem("status");
 
-    if (token && username) {
+    if (token && username && id) {
       setUser({
-        id: id,
+        id: parseInt(id), // Convert string to number for consistency
         username: username,
         email: email,
         token: token,
@@ -40,10 +40,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("access_token", userData.access_token);
     localStorage.setItem("username", userData.username);
     localStorage.setItem("email", userData.email);
-    localStorage.setItem("id", userData.id);
+    localStorage.setItem("id", userData.id.toString()); // Store as string in localStorage
     localStorage.setItem("status", userData.status || "online"); // Update state
     setUser({
-      id: userData.id,
+      id: parseInt(userData.id), // Ensure id is always a number
       username: userData.username,
       email: userData.email,
       token: userData.access_token,

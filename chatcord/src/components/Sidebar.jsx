@@ -279,7 +279,11 @@ export default function SidebarDiscord({
                     </button>
                     
                     {/* Show delete button only if current user created the room */}
-                    {room.createdBy === user?.id && (
+                    {(() => {
+                      const canDelete = room.createdBy === user?.id;
+                      console.log(`Room ${room.name}: createdBy=${room.createdBy} (${typeof room.createdBy}), user.id=${user?.id} (${typeof user?.id}), canDelete=${canDelete}`);
+                      return canDelete;
+                    })() && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
