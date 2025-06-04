@@ -11,13 +11,15 @@ export default function ChatArea({
   sendMessage,
   leaveRoom,
   isConnected,
-}) {
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+}) {  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryText, setSummaryText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImageSrc, setModalImageSrc] = useState("");
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
-
+  const fileInputRef = useRef(null);
   const generateAISummary = async () => {
     if (!currentRoom || isLoadingSummary) return;
     setIsLoadingSummary(true);
@@ -67,12 +69,108 @@ export default function ChatArea({
     }
   };
 
+  const handleImageUpload = async (file) => {
+    if (!file || !currentRoom || isUploadingImage) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image file size must be less than 10MB');
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await http.post(
+        `/rooms/${currentRoom.id}/messages/image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      // Image message will be handled by real-time socket events
+      // No need to manually add to messages here
+
+    } catch (error) {
+      console.error('Error uploading image:', error);
+
+      if (error.response?.status === 401) {
+        alert('Authentication failed. Please log in again.');
+      } else if (error.response?.status === 413) {
+        alert('Image file is too large. Please select a smaller image.');
+      } else if (error.response?.data?.message) {
+        alert(`Error: ${error.response.data.message}`);
+      } else {
+        alert('Failed to upload image. Please try again.');
+      }
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileInputChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
+  const openFileDialog = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const openImageModal = (imageSrc) => {
+    setModalImageSrc(imageSrc);
+    setShowImageModal(true);
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setModalImageSrc("");
+  };
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesAreaRef.current) {
       messagesAreaRef.current.scrollTop = messagesAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Handle keyboard events for image modal
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === "Escape" && showImageModal) {
+        closeImageModal();
+      }
+    };
+
+    if (showImageModal) {
+      document.addEventListener("keydown", handleKeyPress);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+      document.body.style.overflow = "unset";
+    };
+  }, [showImageModal]);
 
   if (!currentRoom) {
     return (
@@ -834,12 +932,12 @@ export default function ChatArea({
                         {msg.isAI || msgData.isAI
                           ? "AI Assistant"
                           : msg.username ||
-                            msg.user?.username ||
-                            msg.user?.name ||
-                            msgData.username ||
-                            msgData.user?.username ||
-                            msgData.user?.name ||
-                            (msg.userId ? `User ${msg.userId}` : "User")}
+                          msg.user?.username ||
+                          msg.user?.name ||
+                          msgData.username ||
+                          msgData.user?.username ||
+                          msgData.user?.name ||
+                          (msg.userId ? `User ${msg.userId}` : "User")}
                       </span>
                       {(msg.isAI || msgData.isAI) && (
                         <span
@@ -868,8 +966,7 @@ export default function ChatArea({
                       >
                         {formattedTime}
                       </span>
-                    </div>
-                    <div
+                    </div>                    <div
                       style={{
                         fontSize: "15px",
                         color: "#f0ebf8",
@@ -879,12 +976,67 @@ export default function ChatArea({
                         fontWeight: 400,
                         letterSpacing: "0.01em",
                       }}
-                    >
-                      {typeof msg.content === "string"
-                        ? msg.content
-                        : typeof msg.message === "string"
-                        ? msg.message
-                        : String(msg.content || msg.message || "")}
+                    >                      {msg.type === 'image' ? (
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            maxWidth: "300px",
+                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                            border: "1px solid rgba(147, 112, 219, 0.2)",
+                            cursor: "pointer",
+                            transition: "all 0.3s ease",
+                          }}
+                          onClick={() => openImageModal(msg.content)}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "scale(1.02)";
+                            e.currentTarget.style.boxShadow = "0 6px 20px rgba(147, 112, 219, 0.4)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)";
+                          }}
+                        >
+                          <img
+                            src={msg.content}
+                            alt="Shared image"
+                            style={{
+                              width: "100%",
+                              height: "auto",
+                              display: "block",
+                              maxHeight: "400px",
+                              objectFit: "cover",
+                              pointerEvents: "none",
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: "none",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "20px",
+                              background: "rgba(239, 68, 68, 0.1)",
+                              color: "#ff6b6b",
+                              fontSize: "14px",
+                              gap: "8px",
+                            }}
+                          >
+                            <span>❌</span>
+                            Failed to load image
+                          </div>
+                        </div>
+                      ) : (
+                        typeof msg.content === "string"
+                          ? msg.content
+                          : typeof msg.message === "string"
+                            ? msg.message
+                            : String(msg.content || msg.message || "")
+                      )}
                     </div>
                     {msg.attachments && Array.isArray(msg.attachments) && (
                       <div
@@ -901,11 +1053,9 @@ export default function ChatArea({
                               width: "60px",
                               height: "60px",
                               borderRadius: "8px",
-                              background: `linear-gradient(135deg, hsl(${
-                                i * 60
-                              }, 70%, 60%) 0%, hsl(${
-                                i * 60 + 30
-                              }, 70%, 50%) 100%)`,
+                              background: `linear-gradient(135deg, hsl(${i * 60
+                                }, 70%, 60%) 0%, hsl(${i * 60 + 30
+                                }, 70%, 50%) 100%)`,
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -990,15 +1140,67 @@ export default function ChatArea({
             inset 0 1px 0 rgba(147, 112, 219, 0.1)
           `,
         }}
+      >        <form
+        onSubmit={sendMessage}
+        style={{
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+        }}
       >
-        <form
-          onSubmit={sendMessage}
-          style={{
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
-          }}
-        >
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileInputChange}
+            style={{ display: "none" }}
+          />
+
+          {/* Image upload button */}
+          <button
+            type="button"
+            onClick={openFileDialog}
+            disabled={!isConnected || isUploadingImage}
+            style={{
+              padding: "14px",
+              background: isConnected && !isUploadingImage
+                ? "rgba(147, 112, 219, 0.15)"
+                : "rgba(147, 112, 219, 0.05)",
+              border: isConnected && !isUploadingImage
+                ? "2px solid rgba(147, 112, 219, 0.35)"
+                : "2px solid rgba(147, 112, 219, 0.15)",
+              borderRadius: "12px",
+              color: isConnected && !isUploadingImage
+                ? "#9370db"
+                : "rgba(147, 112, 219, 0.5)",
+              cursor: isConnected && !isUploadingImage ? "pointer" : "not-allowed",
+              fontSize: "16px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "48px",
+              height: "48px",
+            }}
+            title={isUploadingImage ? "Uploading..." : "Upload image"}
+          >
+            {isUploadingImage ? (
+              <div
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  border: "2px solid rgba(147, 112, 219, 0.3)",
+                  borderTop: "2px solid #9370db",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                }}
+              />
+            ) : (
+              "📷"
+            )}
+          </button>
+
           <input
             type="text"
             value={newMessage}
@@ -1068,8 +1270,7 @@ export default function ChatArea({
           >
             Send
           </button>
-        </form>
-        {!isConnected && (
+        </form>        {!isConnected && (
           <div
             style={{
               marginTop: "8px",
@@ -1083,7 +1284,183 @@ export default function ChatArea({
             ⚠️ Chat is unavailable - check your connection
           </div>
         )}
-      </div>{" "}
+        {isUploadingImage && (
+          <div
+            style={{
+              marginTop: "8px",
+              fontSize: "12px",
+              color: "#9370db",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            📤 Uploading image...
+          </div>
+        )}      </div>{" "}
+      
+      {/* Image Modal */}
+      {showImageModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+            padding: "20px",
+            backdropFilter: "blur(10px)",
+          }}
+          onClick={closeImageModal}
+        >
+          <div
+            style={{
+              position: "relative",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "16px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeImageModal}
+              style={{
+                position: "absolute",
+                top: "-50px",
+                right: "0",
+                background: "rgba(255, 255, 255, 0.2)",
+                border: "2px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backdropFilter: "blur(10px)",
+                transition: "all 0.3s ease",
+                zIndex: 2001,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.3)";
+                e.target.style.transform = "scale(1.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = "rgba(255, 255, 255, 0.2)";
+                e.target.style.transform = "scale(1)";
+              }}
+            >
+              ✕
+            </button>
+            
+            {/* Image container */}
+            <div
+              style={{
+                borderRadius: "16px",
+                overflow: "hidden",
+                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+                border: "2px solid rgba(147, 112, 219, 0.3)",
+                background: "rgba(10, 10, 26, 0.8)",
+                backdropFilter: "blur(15px)",
+              }}
+            >
+              <img
+                src={modalImageSrc}
+                alt="Full size image"
+                style={{
+                  maxWidth: "80vw",
+                  maxHeight: "80vh",
+                  width: "auto",
+                  height: "auto",
+                  display: "block",
+                  objectFit: "contain",
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div
+                style={{
+                  display: "none",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "40px",
+                  background: "rgba(239, 68, 68, 0.1)",
+                  color: "#ff6b6b",
+                  fontSize: "16px",
+                  gap: "12px",
+                  minHeight: "200px",
+                }}
+              >
+                <span style={{ fontSize: "24px" }}>❌</span>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: "600", marginBottom: "8px" }}>
+                    Failed to load image
+                  </div>
+                  <div style={{ fontSize: "14px", opacity: 0.8 }}>
+                    The image might be corrupted or unavailable
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Download/Actions */}
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                alignItems: "center",
+              }}
+            >
+              <a
+                href={modalImageSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "12px 20px",
+                  background: "linear-gradient(135deg, #9370db 0%, #663399 100%)",
+                  border: "2px solid rgba(147, 112, 219, 0.4)",
+                  borderRadius: "12px",
+                  color: "white",
+                  textDecoration: "none",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  backdropFilter: "blur(10px)",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow = "0 8px 25px rgba(147, 112, 219, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "none";
+                }}
+              >
+                <span>📸</span>
+                Open Original
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* AI Summary Modal */}
       {showSummary && (
         <div
