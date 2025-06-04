@@ -5,13 +5,22 @@ class SocketService {
     this.socket = null;
     this.isConnected = false;
     this.serverUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
-  }
-  connect(token) {
-    if (this.socket && this.isConnected) {
+  }  connect(token) {
+    // If socket is already connected and working, return it
+    if (this.socket && this.isConnected && this.socket.connected) {
+      console.log("Socket already connected, reusing existing connection");
       return this.socket;
     }
 
-    console.log(`Attempting to connect to server at: ${this.serverUrl}`);    // Connect to the server with authentication
+    // Clean up any existing socket
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+    }
+
+    console.log(`Attempting to connect to server at: ${this.serverUrl}`);
+    
+    // Connect to the server with authentication
     this.socket = io(this.serverUrl, {
       auth: {
         token: token,
@@ -22,7 +31,6 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       maxReconnectionAttempts: 5,
-      forceNew: true,
     });
 
     // Only set up internal connection status tracking
@@ -40,12 +48,13 @@ class SocketService {
 
     return this.socket;
   }
-
   disconnect() {
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      console.log("Socket disconnected and cleaned up");
     }
   }
 

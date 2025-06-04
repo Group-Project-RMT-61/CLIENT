@@ -2,17 +2,17 @@ import Swal from "sweetalert2";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import http from "../lib/http";
+import { useAuth } from "../contexts";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
 
-  const access_token = localStorage.getItem("access_token");
-  if (access_token) {
+  if (isAuthenticated) {
     return <Navigate to="/" />;
   }
-
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -34,11 +34,8 @@ export default function Login() {
       });
       console.log(response.data, "response");
 
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("status", response.data.status || "online");
-      localStorage.setItem("id", response.data.id);
-      localStorage.setItem("username", response.data.username);
-      localStorage.setItem("email", response.data.email);
+      // Use the AuthContext login method instead of manual localStorage setting
+      login(response.data);
 
       navigate("/");
     } catch (error) {

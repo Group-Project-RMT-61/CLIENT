@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import http from "../lib/http";
 import Swal from "sweetalert2";
+import { useAuth, useRooms } from "../contexts";
 
 export default function SidebarDiscord({
   onRoomSelect,
   selectedRoom,
   onlineUsers,
-  setOnlineUsers,
   onLogout,
 }) {
-  // Get user data from localStorage
-  const username = localStorage.getItem("username") || "User";
-  const [rooms, setRooms] = useState([]); // Initialize as empty array
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const { rooms, loading: roomsLoading, fetchRooms, createRoom } = useRooms();
+
+  // Get user data from context instead of localStorage
+  const username = user?.username || "User";
 
   // Get user's initials from username
   const getUserInitials = (name) => {
@@ -28,65 +29,40 @@ export default function SidebarDiscord({
 
   const initials = getUserInitials(username);
 
-  // Fetch users from API
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await http.get("/users");
-      // Ensure we always set an array, with proper avatar initials
-      const users = Array.isArray(response.data)
-        ? response.data.map((user) => ({
-            ...user,
-            avatar: getUserInitials(user.username),
-          }))
-        : [];
-      setOnlineUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      // Fallback to mock data if API fails
-      setOnlineUsers([
-        {
-          id: 1,
-          username: "Demo User",
-          status: "online",
-          avatar: "DU",
-        },
-        {
-          id: 2,
-          username: "System Bot",
-          status: "idle",
-          avatar: "SB",
-        },
-      ]);
-    }
-  }, [setOnlineUsers]);
-
-  // Fetch rooms and users on component mount
+  // Load rooms when component mounts
   useEffect(() => {
     fetchRooms();
-    fetchUsers();
-  }, [fetchUsers]);
+  }, [fetchRooms]);
 
-  const fetchRooms = async () => {
-    setLoading(true);
-    try {
-      const response = await http.get("/rooms");
-      // Ensure we always set an array
-      setRooms(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
-      // Set empty array on error
-      setRooms([]);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to fetch rooms",
-      });
-    } finally {
-      setLoading(false);
+  const handleCreateRoom = async () => {
+    const { value: roomName } = await Swal.fire({
+      title: "Create New Room",
+      input: "text",
+      inputLabel: "Room Name",
+      inputPlaceholder: "Enter room name...",
+      showCancelButton: true,
+      confirmButtonText: "Create",
+      cancelButtonText: "Cancel",
+      inputValidator: (value) => {
+        if (!value || value.trim().length === 0) {
+          return "Room name is required!";
+        }
+        if (value.trim().length > 50) {
+          return "Room name must be less than 50 characters!";
+        }
+      },
+    });
+
+    if (roomName) {
+      try {
+        await createRoom(roomName.trim());
+      } catch (error) {
+        console.error("Error creating room:", error);
+      }
     }
   };
 
-  const joinRoom = async (roomId) => {
+  const handleJoinRoom = async (roomId) => {
     try {
       const response = await http.post(`/rooms/${roomId}/join`);
 
@@ -97,18 +73,6 @@ export default function SidebarDiscord({
         timer: 1500,
         showConfirmButton: false,
       });
-
-      // Refresh rooms list and trigger room selection
-      fetchRooms();
-
-      // Find the room and trigger selection
-      const room = rooms.find((r) => r.id === roomId) || {
-        id: roomId,
-        name: `room-${roomId}`,
-      };
-      if (onRoomSelect) {
-        onRoomSelect(room);
-      }
     } catch (error) {
       console.error("Error joining room:", error);
       Swal.fire({
@@ -119,38 +83,13 @@ export default function SidebarDiscord({
     }
   };
 
-  const leaveRoom = async (roomId) => {
-    try {
-      const response = await http.delete(`/rooms/${roomId}/leave`);
-
-      Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: response.data.message,
-        timer: 1500,
-        showConfirmButton: false,
-      });
-
-      // Refresh rooms list
-      fetchRooms();
-    } catch (error) {
-      console.error("Error leaving room:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: error.response?.data?.message || "Failed to leave room",
-      });
-    }
-  };
-
   return (
     <div
       style={{
-        flex: 1,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#2f3136",
-        borderRadius: "0",
       }}
     >
       {/* Server Header */}
@@ -164,118 +103,98 @@ export default function SidebarDiscord({
         <h3
           style={{
             margin: 0,
+            color: "#ffffff",
             fontSize: "16px",
             fontWeight: "600",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
           }}
         >
           ChatCord Server
-          <span
-            style={{
-              fontSize: "12px",
-              color: "#b9bbbe",
-              background: "#4f545c",
-              padding: "2px 6px",
-              borderRadius: "4px",
-            }}
-          >
-            ↓
-          </span>
         </h3>
       </div>
 
-      {/* Text Channels Section */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        <div style={{ padding: "16px 8px 8px 16px" }}>
-          <div
+      {/* Rooms Section */}
+      <div
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            padding: "16px 12px 8px 16px",
+            color: "#8e9297",
+            fontSize: "12px",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.02em",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>Text Channels</span>
+          <button
+            onClick={handleCreateRoom}
             style={{
+              background: "none",
+              border: "none",
+              color: "#8e9297",
+              cursor: "pointer",
+              fontSize: "18px",
+              padding: "0",
+              width: "18px",
+              height: "18px",
               display: "flex",
               alignItems: "center",
-              gap: "4px",
-              marginBottom: "8px",
+              justifyContent: "center",
+              borderRadius: "3px",
             }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#40444b";
+              e.target.style.color = "#dcddde";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "transparent";
+              e.target.style.color = "#8e9297";
+            }}
+            title="Create Channel"
           >
-            <span
-              style={{
-                fontSize: "12px",
-                fontWeight: "600",
-                color: "#8e9297",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                cursor: "pointer",
-              }}
-            >
-              ▼ Text Channels
-            </span>
-            <div
-              style={{
-                marginLeft: "auto",
-                fontSize: "18px",
-                color: "#b9bbbe",
-                cursor: "pointer",
-                padding: "2px",
-              }}
-            >
-              +
-            </div>
-          </div>
+            +
+          </button>
+        </div>
 
-          {/* Channels List */}
-          <div style={{ paddingLeft: "8px" }}>
-            {loading ? (
-              <div
-                style={{
-                  color: "#8e9297",
-                  fontSize: "14px",
-                  padding: "8px 0",
-                }}
-              >
-                Loading channels...
-              </div>
-            ) : !Array.isArray(rooms) || rooms.length === 0 ? (
-              <div
-                style={{
-                  color: "#8e9297",
-                  fontSize: "14px",
-                  padding: "8px 0",
-                }}
-              >
-                No channels available
-              </div>
-            ) : (
-              rooms.map((room) => (
+        {/* Rooms List */}
+        <div style={{ flex: 1, overflow: "auto", paddingRight: "8px" }}>
+          {roomsLoading ? (
+            <div
+              style={{ padding: "16px", color: "#8e9297", textAlign: "center" }}
+            >
+              Loading rooms...
+            </div>
+          ) : (
+            <div style={{ padding: "0 8px" }}>
+              {rooms.map((room) => (
                 <div
                   key={room.id}
-                  onClick={() => onRoomSelect && onRoomSelect(room)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    // Show context menu for join/leave
-                    if (selectedRoom?.id === room.id) {
-                      leaveRoom(room.id);
-                    } else {
-                      joinRoom(room.id);
-                    }
-                  }}
+                  onClick={() => onRoomSelect(room)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
                     padding: "6px 8px",
                     margin: "1px 0",
                     borderRadius: "4px",
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    color: selectedRoom?.id === room.id ? "#ffffff" : "#8e9297",
                     backgroundColor:
                       selectedRoom?.id === room.id ? "#42464d" : "transparent",
-                    color: selectedRoom?.id === room.id ? "#ffffff" : "#8e9297",
                     fontSize: "16px",
-                    transition: "all 0.15s ease",
+                    fontWeight: selectedRoom?.id === room.id ? "500" : "400",
                   }}
                   onMouseEnter={(e) => {
                     if (selectedRoom?.id !== room.id) {
-                      e.target.style.backgroundColor = "#3c3f45";
+                      e.target.style.backgroundColor = "#36393f";
                       e.target.style.color = "#dcddde";
                     }
                   }}
@@ -286,431 +205,174 @@ export default function SidebarDiscord({
                     }
                   }}
                 >
-                  <span style={{ fontSize: "20px" }}>#</span>
-                  <span style={{ fontSize: "16px", fontWeight: "500" }}>
-                    {room.name.toLowerCase().replace(/\s+/g, "-")}
-                  </span>
-                  {selectedRoom?.id === room.id && (
-                    <div
-                      style={{
-                        marginLeft: "auto",
-                        display: "flex",
-                        gap: "4px",
-                      }}
-                    >
-                      <span
-                        style={{ fontSize: "16px", cursor: "pointer" }}
-                        title="Notifications"
-                      >
-                        🔔
-                      </span>
-                      <span
-                        style={{ fontSize: "16px", cursor: "pointer" }}
-                        title="Members"
-                      >
-                        👥
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-
-            {/* Default general channel */}
-            <div
-              onClick={() =>
-                onRoomSelect && onRoomSelect({ id: "general", name: "general" })
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "6px 8px",
-                margin: "1px 0",
-                borderRadius: "4px",
-                cursor: "pointer",
-                backgroundColor:
-                  selectedRoom?.id === "general" ? "#42464d" : "transparent",
-                color: selectedRoom?.id === "general" ? "#ffffff" : "#8e9297",
-                fontSize: "16px",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                if (selectedRoom?.id !== "general") {
-                  e.target.style.backgroundColor = "#3c3f45";
-                  e.target.style.color = "#dcddde";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedRoom?.id !== "general") {
-                  e.target.style.backgroundColor = "transparent";
-                  e.target.style.color = "#8e9297";
-                }
-              }}
-            >
-              <span style={{ fontSize: "20px" }}>#</span>
-              <span style={{ fontSize: "16px", fontWeight: "500" }}>
-                general
-              </span>
-              {selectedRoom?.id === "general" && (
-                <div
-                  style={{
-                    marginLeft: "auto",
-                    display: "flex",
-                    gap: "4px",
-                  }}
-                >
-                  <span
-                    style={{ fontSize: "16px", cursor: "pointer" }}
-                    title="Notifications"
-                  >
-                    🔔
+                  <span style={{ marginRight: "6px", fontSize: "20px" }}>
+                    #
                   </span>
                   <span
-                    style={{ fontSize: "16px", cursor: "pointer" }}
-                    title="Members"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    👥
+                    {room.name}
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleJoinRoom(room.id);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#8e9297",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      padding: "2px 6px",
+                      borderRadius: "3px",
+                      marginLeft: "8px",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = "#40444b";
+                      e.target.style.color = "#dcddde";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = "transparent";
+                      e.target.style.color = "#8e9297";
+                    }}
+                    title="Join Room"
+                  >
+                    Join
+                  </button>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
+          )}
         </div>
-
-        {/* Online Users Section */}
-        {onlineUsers.filter((u) => u.status === "online").length > 0 && (
-          <div style={{ padding: "16px 8px 8px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                marginBottom: "8px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  color: "#8e9297",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                ▼ Online —{" "}
-                {onlineUsers.filter((u) => u.status === "online").length}
-              </span>
-            </div>
-
-            <div style={{ paddingLeft: "8px" }}>
-              {onlineUsers
-                .filter((user) => user.status === "online")
-                .map((user) => (
-                  <div
-                    key={user.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "8px",
-                      margin: "1px 0",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#3c3f45";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <div style={{ position: "relative" }}>
-                      <div
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #4ade80 0%, #22c55e 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          color: "white",
-                        }}
-                      >
-                        {user.avatar}
-                      </div>
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: "-2px",
-                          right: "-2px",
-                          width: "12px",
-                          height: "12px",
-                          backgroundColor: "#4ade80",
-                          border: "3px solid #2f3136",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#dcddde",
-                      }}
-                    >
-                      {user.username}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Idle Users Section */}
-        {onlineUsers.filter((u) => u.status === "idle").length > 0 && (
-          <div style={{ padding: "16px 8px 8px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                marginBottom: "8px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  color: "#8e9297",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                ▼ Idle — {onlineUsers.filter((u) => u.status === "idle").length}
-              </span>
-            </div>
-
-            <div style={{ paddingLeft: "8px" }}>
-              {onlineUsers
-                .filter((user) => user.status === "idle")
-                .map((user) => (
-                  <div
-                    key={user.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "8px",
-                      margin: "1px 0",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#3c3f45";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <div style={{ position: "relative" }}>
-                      <div
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #facc15 0%, #eab308 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          color: "white",
-                        }}
-                      >
-                        {user.avatar}
-                      </div>
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: "-2px",
-                          right: "-2px",
-                          width: "12px",
-                          height: "12px",
-                          backgroundColor: "#facc15",
-                          border: "3px solid #2f3136",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#dcddde",
-                      }}
-                    >
-                      {user.username}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Offline Users Section */}
-        {onlineUsers.filter((u) => u.status === "offline").length > 0 && (
-          <div style={{ padding: "16px 8px 8px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                marginBottom: "8px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "600",
-                  color: "#8e9297",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                ▼ Offline —{" "}
-                {onlineUsers.filter((u) => u.status === "offline").length}
-              </span>
-            </div>
-
-            <div style={{ paddingLeft: "8px" }}>
-              {onlineUsers
-                .filter((user) => user.status === "offline")
-                .map((user) => (
-                  <div
-                    key={user.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "8px",
-                      margin: "1px 0",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      opacity: 0.5,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#3c3f45";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <div style={{ position: "relative" }}>
-                      <div
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          color: "white",
-                        }}
-                      >
-                        {user.avatar}
-                      </div>
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: "-2px",
-                          right: "-2px",
-                          width: "12px",
-                          height: "12px",
-                          backgroundColor: "#747f8d",
-                          border: "3px solid #2f3136",
-                          borderRadius: "50%",
-                        }}
-                      />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "#dcddde",
-                      }}
-                    >
-                      {user.username}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* User Profile Panel */}
+      {/* Online Users Section */}
+      <div
+        style={{
+          borderTop: "1px solid #202225",
+          maxHeight: "200px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            padding: "16px 12px 8px 16px",
+            color: "#8e9297",
+            fontSize: "12px",
+            fontWeight: "600",
+            textTransform: "uppercase",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Online Users — {onlineUsers.length}
+        </div>
+        <div style={{ overflow: "auto", paddingBottom: "8px" }}>
+          {onlineUsers.map((user) => (
+            <div
+              key={user.id}
+              style={{
+                padding: "4px 16px",
+                display: "flex",
+                alignItems: "center",
+                color: "#dcddde",
+              }}
+            >
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  backgroundColor: "#5865f2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  marginRight: "12px",
+                }}
+              >
+                {user.avatar || getUserInitials(user.username)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {user.username}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#8e9297",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {user.status || "online"}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* User Profile Section */}
       <div
         style={{
           padding: "8px",
-          backgroundColor: "#292b2f",
           borderTop: "1px solid #202225",
+          backgroundColor: "#292b2f",
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          justifyContent: "space-between",
         }}
       >
-        {/* User Avatar and Info */}
         <div
-          style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flex: 1,
+            minWidth: 0,
+          }}
         >
-          <div style={{ position: "relative" }}>
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #4ade80 0%, #22c55e 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "12px",
-                fontWeight: "600",
-                color: "white",
-              }}
-            >
-              {initials}
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                bottom: "-2px",
-                right: "-2px",
-                width: "12px",
-                height: "12px",
-                backgroundColor: "#4ade80",
-                border: "3px solid #292b2f",
-                borderRadius: "50%",
-              }}
-            />
+          <div
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              backgroundColor: "#5865f2",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "600",
+              marginRight: "8px",
+            }}
+          >
+            {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 fontSize: "14px",
-                fontWeight: "600",
+                fontWeight: "500",
                 color: "#ffffff",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -722,34 +384,41 @@ export default function SidebarDiscord({
             <div
               style={{
                 fontSize: "12px",
-                color: "#b9bbbe",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                color: "#8e9297",
               }}
             >
-              Online
+              online
             </div>
           </div>
         </div>
 
-        {/* Control Buttons */}
-        <div className="container d-flex justify-content-end">
-          <button
-            onClick={onLogout}
-
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#4f545c";
-              e.target.style.color = "#dcddde";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = "transparent";
-              e.target.style.color = "#b9bbbe";
-            }}
-          >
-            Logout
-          </button>
-        </div>
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#8e9297",
+            cursor: "pointer",
+            fontSize: "16px",
+            padding: "8px",
+            borderRadius: "4px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#40444b";
+            e.target.style.color = "#dcddde";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "transparent";
+            e.target.style.color = "#8e9297";
+          }}
+          title="Logout"
+        >
+          🚪
+        </button>
       </div>
     </div>
   );
