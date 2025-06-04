@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import http from "../lib/http";
 import socketService from "../lib/socket";
 import Swal from "sweetalert2";
@@ -47,9 +53,9 @@ export const RoomProvider = ({ children }) => {
       const handleRoomCreated = (data) => {
         console.log("Room created event received:", data);
         console.log("New room data:", data.room);
-        setRooms(prevRooms => {
+        setRooms((prevRooms) => {
           // Check if room already exists to avoid duplicates
-          const roomExists = prevRooms.find(room => room.id === data.room.id);
+          const roomExists = prevRooms.find((room) => room.id === data.room.id);
           if (roomExists) {
             console.log("Room already exists, skipping duplicate");
             return prevRooms;
@@ -57,33 +63,41 @@ export const RoomProvider = ({ children }) => {
           console.log("Adding new room to list");
           return [...prevRooms, data.room];
         });
-        
+
         // Show notification
         Swal.fire({
           icon: "info",
           title: "New Room Created",
-          text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+          text: `"${data.room.name}" room was created by ${
+            data.room.creator?.username || "someone"
+          }`,
           timer: 3000,
           showConfirmButton: false,
           toast: true,
-          position: "top-end"
+          position: "top-end",
         });
       };
 
       const handleRoomRemoved = (data) => {
         console.log("Room removed event received:", data);
         console.log("Room ID to remove:", data.roomId, typeof data.roomId);
-        setRooms(prevRooms => {
-          console.log("Current rooms before filtering:", prevRooms.map(r => ({id: r.id, name: r.name})));
-          const updatedRooms = prevRooms.filter(room => {
+        setRooms((prevRooms) => {
+          console.log(
+            "Current rooms before filtering:",
+            prevRooms.map((r) => ({ id: r.id, name: r.name }))
+          );
+          const updatedRooms = prevRooms.filter((room) => {
             const shouldKeep = room.id !== data.roomId;
             console.log(`Room ${room.id} (${room.name}): keep=${shouldKeep}`);
             return shouldKeep;
           });
-          console.log("Rooms after removal:", updatedRooms.map(r => ({id: r.id, name: r.name})));
+          console.log(
+            "Rooms after removal:",
+            updatedRooms.map((r) => ({ id: r.id, name: r.name }))
+          );
           return updatedRooms;
         });
-        
+
         // Show notification
         Swal.fire({
           icon: "warning",
@@ -92,7 +106,7 @@ export const RoomProvider = ({ children }) => {
           timer: 3000,
           showConfirmButton: false,
           toast: true,
-          position: "top-end"
+          position: "top-end",
         });
       };
 
@@ -116,7 +130,9 @@ export const RoomProvider = ({ children }) => {
       } else {
         retryCount++;
         if (retryCount <= maxRetries) {
-          console.log(`Socket not connected yet, retrying... (${retryCount}/${maxRetries})`);
+          console.log(
+            `Socket not connected yet, retrying... (${retryCount}/${maxRetries})`
+          );
           setTimeout(trySetupListeners, 1000);
         } else {
           console.warn("Max retries reached, setting up listeners anyway");
@@ -140,24 +156,28 @@ export const RoomProvider = ({ children }) => {
   useEffect(() => {
     const handleRoomCreated = (data) => {
       console.log("Room created:", data.room);
-      setRooms(prevRooms => [...prevRooms, data.room]);
-      
+      setRooms((prevRooms) => [...prevRooms, data.room]);
+
       // Show notification
       Swal.fire({
         icon: "info",
         title: "New Room Created",
-        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+        text: `"${data.room.name}" room was created by ${
+          data.room.creator?.username || "someone"
+        }`,
         timer: 3000,
         showConfirmButton: false,
         toast: true,
-        position: "top-end"
+        position: "top-end",
       });
     };
 
     const handleRoomRemoved = (data) => {
       console.log("Room removed:", data.roomId);
-      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
-      
+      setRooms((prevRooms) =>
+        prevRooms.filter((room) => room.id !== data.roomId)
+      );
+
       // Show notification
       Swal.fire({
         icon: "warning",
@@ -166,7 +186,7 @@ export const RoomProvider = ({ children }) => {
         timer: 3000,
         showConfirmButton: false,
         toast: true,
-        position: "top-end"
+        position: "top-end",
       });
     };
 
@@ -238,7 +258,7 @@ export const RoomProvider = ({ children }) => {
       console.log("Creating room with data:", roomData);
       const token = localStorage.getItem("access_token");
       console.log("Token exists:", !!token);
-      
+
       const response = await http.post("/rooms", roomData);
       console.log("Room creation successful:", response.data);
 

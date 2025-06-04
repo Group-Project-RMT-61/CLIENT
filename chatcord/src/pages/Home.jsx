@@ -60,8 +60,11 @@ export default function Home() {
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "#36393f",
+        height: "100vh",
+        maxHeight: "100vh",
+        overflow: "hidden",
+        background:
+          "linear-gradient(135deg, #2c2f36 0%, #36393f 50%, #40444b 100%)",
         display: "flex",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -69,49 +72,18 @@ export default function Home() {
       }}
     >
       {/* Connection Status */}
-      <div
-        style={{
-          position: "fixed",
-          top: "10px",
-          right: "10px",
-          display: "flex",
-          gap: "8px",
-          zIndex: 1000,
-        }}
-      >
-        <div
-          style={{
-            background: isConnected ? "#22c55e" : "#ef4444",
-            color: "white",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            fontWeight: "500",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
-        >
-          <div
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: "white",
-            }}
-          />
-          {isConnected ? "Connected" : "Disconnected"}
-        </div>
-      </div>
 
       {/* Sidebar */}
       <div
         style={{
           width: "240px",
-          backgroundColor: "#2f3136",
-          borderRight: "1px solid #202225",
+          backgroundColor: "#1e2124",
+          borderRight: "1px solid #40444b",
           display: "flex",
           flexDirection: "column",
+          height: "100vh",
+          overflow: "hidden",
+          boxShadow: "2px 0 10px rgba(0, 0, 0, 0.3)",
         }}
       >
         <Sidebar
@@ -123,7 +95,15 @@ export default function Home() {
       </div>
 
       {/* Main Chat Area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      >
         <ChatArea
           currentRoom={selectedRoom}
           messages={messages}
