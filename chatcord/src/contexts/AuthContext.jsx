@@ -14,13 +14,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   // Check if user is authenticated on app start
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     const username = localStorage.getItem("username");
     const email = localStorage.getItem("email");
     const id = localStorage.getItem("id");
+    const status = localStorage.getItem("status");
 
     if (token && username) {
       setUser({
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
         username: username,
         email: email,
         token: token,
+        status: status || "online",
       });
       setIsAuthenticated(true);
     }
@@ -40,14 +41,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("username", userData.username);
     localStorage.setItem("email", userData.email);
     localStorage.setItem("id", userData.id);
-    localStorage.setItem("status", userData.status || "online");
-
-    // Update state
+    localStorage.setItem("status", userData.status || "online"); // Update state
     setUser({
       id: userData.id,
       username: userData.username,
       email: userData.email,
       token: userData.access_token,
+      status: userData.status || "online",
     });
     setIsAuthenticated(true);
   };

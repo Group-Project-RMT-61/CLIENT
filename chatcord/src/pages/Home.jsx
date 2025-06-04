@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate, useLocation } from "react-router";
 import Swal from "sweetalert2";
 
 import Sidebar from "../components/Sidebar";
@@ -8,6 +8,7 @@ import { useAuth, useChat } from "../contexts";
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const {
     selectedRoom,
@@ -133,6 +134,8 @@ export default function Home() {
           isConnected={isConnected}
         />
       </div>
+
+      {/* Status Feature Demo - Shown only for demo users */}
     </div>
   );
 }
