@@ -22,15 +22,135 @@ export const useChat = () => {
 export const ChatProvider = ({ children }) => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [messages, setMessages] = useState([]);
+  // const [messageCache, setMessageCache] = useState({}); // Cache messages per room - commented out unused
   const [newMessage, setNewMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const messagesRef = useRef(messages);
 
+  // Persistence functions for localStorage
+  const saveSelectedRoomToStorage = useCallback((room) => {
+    try {
+      if (room) {
+        localStorage.setItem("chatcord_selectedRoom", JSON.stringify(room));
+      } else {
+        localStorage.removeItem("chatcord_selectedRoom");
+      }
+    } catch (error) {
+      console.error("Error saving selected room to localStorage:", error);
+    }
+  }, []);
+
+  const loadSelectedRoomFromStorage = useCallback(() => {
+    try {
+      const savedRoom = localStorage.getItem("chatcord_selectedRoom");
+      return savedRoom ? JSON.parse(savedRoom) : null;
+    } catch (error) {
+      console.error("Error loading selected room from localStorage:", error);
+      return null;
+    }
+  }, []);
+  const saveMessagesToCache = useCallback((roomId, messages) => {
+    try {
+      if (roomId && messages) {
+        const cacheKey = `chatcord_messages_${roomId}`;
+        // Limit to last 100 messages to prevent localStorage from growing too large
+        const limitedMessages = messages.slice(-100);
+        localStorage.setItem(cacheKey, JSON.stringify(limitedMessages));
+
+        // Update local cache state (if we used it)
+        // setMessageCache(prev => ({
+        //   ...prev,
+        //   [roomId]: limitedMessages
+        // }));
+      }
+    } catch (error) {
+      console.error("Error saving messages to cache:", error);
+    }
+  }, []);
+
+  const loadMessagesFromCache = useCallback((roomId) => {
+    try {
+      if (roomId) {
+        const cacheKey = `chatcord_messages_${roomId}`;
+        const cachedMessages = localStorage.getItem(cacheKey);
+        return cachedMessages ? JSON.parse(cachedMessages) : [];
+      }
+      return [];
+    } catch (error) {
+      console.error("Error loading messages from cache:", error);
+      return [];
+    }
+  }, []);
+  // Clear old message cache (keep only recent rooms)
+  // const clearOldMessageCache = useCallback(() => {
+  //   try {
+  //     const keysToRemove = [];
+  //     for (let i = 0; i < localStorage.length; i++) {
+  //       const key = localStorage.key(i);
+  //       if (key && key.startsWith('chatcord_messages_')) {
+  //         // You can add logic here to remove old cache entries
+  //         // For now, we'll keep all cache but limit message count per room
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error clearing old message cache:', error);
+  //   }
+  // }, []);
+
+  // Load saved room and message cache on component mount
+  useEffect(() => {
+    const savedRoom = loadSelectedRoomFromStorage();
+    if (savedRoom) {
+      setSelectedRoom(savedRoom);
+      // Load cached messages for the saved room
+      const cachedMessages = loadMessagesFromCache(savedRoom.id);
+      setMessages(cachedMessages);
+    } // Load all message cache from localStorage
+    try {
+      // const cache = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("chatcord_messages_")) {
+          // const roomId = key.replace('chatcord_messages_', '');
+          // const messages = JSON.parse(localStorage.getItem(key) || '[]');
+          // cache[roomId] = messages;
+        }
+      }
+      // setMessageCache(cache);
+    } catch (error) {
+      console.error("Error loading message cache:", error);
+    }
+  }, [loadSelectedRoomFromStorage, loadMessagesFromCache]);
+
   // Update ref when messages change
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // Save messages to cache whenever messages change
+  useEffect(() => {
+    if (selectedRoom && messages.length > 0) {
+      saveMessagesToCache(selectedRoom.id, messages);
+    }
+  }, [messages, selectedRoom, saveMessagesToCache]);
+
+  // Auto-rejoin room when socket connects and we have a selected room
+  useEffect(() => {
+    if (
+      isConnected &&
+      selectedRoom &&
+      selectedRoom.id &&
+      socketService.isSocketConnected()
+    ) {
+      // Check if we're not already in the room by checking if we should rejoin
+      console.log(
+        `Ensuring user is joined to room: ${selectedRoom.name} (${selectedRoom.id})`
+      );
+      socketService.joinRoom(selectedRoom.id);
+    }
+  }, [isConnected, selectedRoom]);
+
   // Initialize Socket.IO connection
   const initializeSocket = useCallback((token) => {
     // Prevent multiple connections
@@ -40,12 +160,26 @@ export const ChatProvider = ({ children }) => {
     }
 
     if (token) {
-      const socket = socketService.connect(token);
-
-      // Connection status
+      const socket = socketService.connect(token); // Connection status
       socket.on("connect", () => {
         console.log("Connected to server");
         setIsConnected(true);
+
+        // Auto-rejoin saved room when socket connects
+        const savedRoom = loadSelectedRoomFromStorage();
+        if (savedRoom && savedRoom.id) {
+          console.log(
+            `Auto-rejoining saved room: ${savedRoom.name} (${savedRoom.id})`
+          );
+          socketService.joinRoom(savedRoom.id);
+
+          // Make sure the selectedRoom state is set
+          setSelectedRoom(savedRoom);
+
+          // Load cached messages for the saved room
+          const cachedMessages = loadMessagesFromCache(savedRoom.id);
+          setMessages(cachedMessages);
+        }
       });
 
       socket.on("disconnect", (reason) => {
@@ -68,10 +202,27 @@ export const ChatProvider = ({ children }) => {
           });
         }
       });
-
       socket.on("reconnect", (attemptNumber) => {
         console.log("Reconnected to server after", attemptNumber, "attempts");
         setIsConnected(true);
+
+        // Auto-rejoin saved room when socket reconnects
+        const savedRoom = loadSelectedRoomFromStorage();
+        const roomToRejoin = selectedRoom || savedRoom;
+
+        if (roomToRejoin && roomToRejoin.id) {
+          console.log(
+            `Auto-rejoining room after reconnect: ${roomToRejoin.name} (${roomToRejoin.id})`
+          );
+          socketService.joinRoom(roomToRejoin.id);
+
+          // Make sure state is consistent
+          if (!selectedRoom && savedRoom) {
+            setSelectedRoom(savedRoom);
+            const cachedMessages = loadMessagesFromCache(savedRoom.id);
+            setMessages(cachedMessages);
+          }
+        }
       });
 
       socket.on("reconnect_attempt", (attemptNumber) => {
@@ -261,20 +412,33 @@ export const ChatProvider = ({ children }) => {
       }
     }
   }, [onlineUsers.length]);
-
   const handleRoomSelect = (room) => {
+    // Save current room's messages before leaving
+    if (selectedRoom && messages.length > 0) {
+      saveMessagesToCache(selectedRoom.id, messages);
+    }
+
     // Leave previous room if any
     if (selectedRoom) {
       socketService.leaveRoom(selectedRoom.id);
     }
 
+    // Set new room and save to localStorage
     setSelectedRoom(room);
-    setMessages([]); // Clear messages when switching rooms
+    saveSelectedRoomToStorage(room);
 
-    // Join new room
-    if (room && socketService.isSocketConnected()) {
-      socketService.joinRoom(room.id);
-      console.log(`Joining room: ${room.name} (${room.id})`);
+    // Load cached messages for the new room
+    if (room) {
+      const cachedMessages = loadMessagesFromCache(room.id);
+      setMessages(cachedMessages);
+
+      // Join new room
+      if (socketService.isSocketConnected()) {
+        socketService.joinRoom(room.id);
+        console.log(`Joining room: ${room.name} (${room.id})`);
+      }
+    } else {
+      setMessages([]);
     }
   };
 
@@ -323,12 +487,18 @@ export const ChatProvider = ({ children }) => {
       });
     }
   };
-
   const leaveRoom = () => {
+    // Save current room's messages before leaving
+    if (selectedRoom && messages.length > 0) {
+      saveMessagesToCache(selectedRoom.id, messages);
+    }
+
     if (selectedRoom && socketService.isSocketConnected()) {
       socketService.leaveRoom(selectedRoom.id);
     }
+
     setSelectedRoom(null);
+    saveSelectedRoomToStorage(null); // Clear from localStorage
     setMessages([]);
   };
   const disconnectSocket = useCallback(() => {

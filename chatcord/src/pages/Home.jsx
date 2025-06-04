@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, useNavigate, useLocation } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import Swal from "sweetalert2";
 
 import Sidebar from "../components/Sidebar";
@@ -8,7 +8,7 @@ import { useAuth, useChat } from "../contexts";
 
 export default function Home() {
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation(); // Commented out unused variable
   const { isAuthenticated, user, logout } = useAuth();
   const {
     selectedRoom,
