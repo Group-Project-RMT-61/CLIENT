@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import http from "../lib/http";
 import UserStatusIndicator from "./UserStatusIndicator";
 
@@ -15,6 +15,7 @@ export default function ChatArea({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryText, setSummaryText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
+  const messagesEndRef = useRef(null);
 
   const generateAISummary = async () => {
     if (!currentRoom || isLoadingSummary) return;
@@ -67,6 +68,13 @@ export default function ChatArea({
       setIsLoadingSummary(false);
     }
   };
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   if (!currentRoom) {
     return (
@@ -140,27 +148,109 @@ export default function ChatArea({
     );
   }
 
+  // Check if user has joined the room
+  if (!currentRoom.isJoined) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            width: "80px",
+            height: "80px",
+            background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            borderRadius: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "32px",
+          }}
+        >
+          🔒
+        </div>
+        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "600" }}>
+          Join Room to Chat
+        </h2>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "16px",
+            color: "rgba(255, 255, 255, 0.6)",
+            textAlign: "center",
+          }}
+        >
+          You need to join "#{currentRoom.name}" to view messages and
+          participate in the conversation.
+        </p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "14px",
+            color: "rgba(255, 255, 255, 0.4)",
+            textAlign: "center",
+          }}
+        >
+          Use the "Join" button in the sidebar to join this room.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+        position: "relative",
+        background: `
+          radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+          linear-gradient(180deg, rgba(54, 57, 63, 0.8) 0%, rgba(64, 68, 75, 0.9) 100%)
+        `,
+      }}
+    >
       {/* Chat Header */}
       <div
         style={{
           padding: "20px 24px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexShrink: 0,
+          backgroundColor: "rgba(255, 255, 255, 0.03)",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
         }}
       >
         <div>
-          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "600" }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "22px",
+              fontWeight: "700",
+              color: "#ffffff",
+              textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
+            }}
+          >
             # {currentRoom.name}
           </h2>
           <p
             style={{
               margin: "4px 0 0 0",
               fontSize: "14px",
-              color: "rgba(255, 255, 255, 0.6)",
+              color: "rgba(255, 255, 255, 0.7)",
+              fontWeight: "500",
             }}
           >
             {onlineUsers.length} members online
@@ -178,30 +268,23 @@ export default function ChatArea({
             style={{
               background: isLoadingSummary
                 ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(59, 130, 246, 0.2)",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
-              borderRadius: "8px",
-              padding: "8px 16px",
-              color: isLoadingSummary ? "rgba(255, 255, 255, 0.5)" : "#60a5fa",
+                : "linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%)",
+              border: isLoadingSummary
+                ? "1px solid rgba(255, 255, 255, 0.1)"
+                : "1px solid rgba(102, 126, 234, 0.5)",
+              borderRadius: "10px",
+              padding: "10px 18px",
+              color: isLoadingSummary ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
               cursor: isLoadingSummary ? "not-allowed" : "pointer",
               fontSize: "14px",
+              fontWeight: "600",
+              boxShadow: isLoadingSummary
+                ? "none"
+                : "0 4px 12px rgba(102, 126, 234, 0.3)",
+              transition: "all 0.2s ease",
             }}
           >
             {isLoadingSummary ? "Generating..." : "AI Summary"}
-          </button>
-          <button
-            onClick={() => leaveRoom(currentRoom.id)}
-            style={{
-              background: "rgba(255, 255, 255, 0.1)",
-              border: "none",
-              borderRadius: "8px",
-              padding: "8px 16px",
-              color: "white",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Leave Room
           </button>
         </div>
       </div>
@@ -214,6 +297,8 @@ export default function ChatArea({
           display: "flex",
           flexDirection: "column",
           gap: "20px",
+          minHeight: 0,
+          scrollBehavior: "smooth",
         }}
       >
         {" "}
@@ -246,14 +331,15 @@ export default function ChatArea({
                     gap: "12px",
                     backgroundColor:
                       msg.isAI || msgData.isAI
-                        ? "rgba(102, 126, 234, 0.1)"
-                        : "transparent",
-                    borderRadius: msg.isAI || msgData.isAI ? "8px" : "0",
-                    padding: msg.isAI || msgData.isAI ? "12px" : "0",
+                        ? "rgba(102, 126, 234, 0.15)"
+                        : "rgba(255, 255, 255, 0.05)",
+                    borderRadius: "12px",
+                    padding: "16px",
                     border:
                       msg.isAI || msgData.isAI
-                        ? "1px solid rgba(102, 126, 234, 0.3)"
-                        : "none",
+                        ? "1px solid rgba(102, 126, 234, 0.4)"
+                        : "1px solid rgba(255, 255, 255, 0.1)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
                   }}
                 >
                   {" "}
@@ -415,22 +501,63 @@ export default function ChatArea({
           <div
             style={{
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               height: "100%",
-              color: "rgba(255, 255, 255, 0.5)",
-              fontSize: "14px",
+              gap: "16px",
+              textAlign: "center",
             }}
           >
-            No messages yet. Start the conversation!
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "24px",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+              }}
+            >
+              💬
+            </div>
+            <div>
+              <p
+                style={{
+                  margin: "0 0 8px 0",
+                  color: "rgba(255, 255, 255, 0.8)",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                }}
+              >
+                No messages yet
+              </p>
+              <p
+                style={{
+                  margin: "0",
+                  color: "rgba(255, 255, 255, 0.5)",
+                  fontSize: "14px",
+                }}
+              >
+                Start the conversation!
+              </p>
+            </div>
           </div>
         )}
+        {/* Scroll to bottom marker */}
+        <div ref={messagesEndRef} style={{ height: "1px" }} />
       </div>
       {/* Message Input */}
       <div
         style={{
           padding: "24px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+          flexShrink: 0,
+          backgroundColor: "rgba(255, 255, 255, 0.02)",
+          backdropFilter: "blur(10px)",
         }}
       >
         <form
@@ -453,37 +580,59 @@ export default function ChatArea({
             disabled={!isConnected}
             style={{
               flex: 1,
-              padding: "12px 16px",
+              padding: "14px 18px",
               backgroundColor: isConnected
-                ? "rgba(255, 255, 255, 0.08)"
-                : "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
+                ? "rgba(255, 255, 255, 0.12)"
+                : "rgba(255, 255, 255, 0.05)",
+              border: isConnected
+                ? "2px solid rgba(102, 126, 234, 0.3)"
+                : "2px solid rgba(255, 255, 255, 0.1)",
               borderRadius: "12px",
               color: isConnected ? "white" : "rgba(255, 255, 255, 0.5)",
               fontSize: "14px",
               outline: "none",
               cursor: isConnected ? "text" : "not-allowed",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+            }}
+            onFocus={(e) => {
+              if (isConnected) {
+                e.target.style.borderColor = "rgba(102, 126, 234, 0.6)";
+                e.target.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+              }
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = "rgba(102, 126, 234, 0.3)";
+              e.target.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
             }}
           />
           <button
             type="submit"
             disabled={!isConnected || !newMessage.trim()}
             style={{
-              padding: "12px 16px",
+              padding: "14px 20px",
               background:
                 isConnected && newMessage.trim()
                   ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                  : "rgba(255, 255, 255, 0.1)",
-              border: "none",
+                  : "rgba(255, 255, 255, 0.08)",
+              border:
+                isConnected && newMessage.trim()
+                  ? "2px solid rgba(102, 126, 234, 0.3)"
+                  : "2px solid rgba(255, 255, 255, 0.1)",
               borderRadius: "12px",
               color:
                 isConnected && newMessage.trim()
                   ? "white"
-                  : "rgba(255, 255, 255, 0.5)",
+                  : "rgba(255, 255, 255, 0.4)",
               cursor:
                 isConnected && newMessage.trim() ? "pointer" : "not-allowed",
               fontSize: "14px",
-              opacity: isConnected && newMessage.trim() ? 1 : 0.6,
+              fontWeight: "600",
+              boxShadow:
+                isConnected && newMessage.trim()
+                  ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                  : "none",
+              transition: "all 0.2s ease",
             }}
           >
             Send

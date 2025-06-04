@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import http from "../lib/http";
 import Swal from "sweetalert2";
 import { useAuth, useRooms, useUsers } from "../contexts";
 import UserStatusIndicator from "./UserStatusIndicator";
@@ -12,7 +11,15 @@ export default function SidebarDiscord({
   onLogout,
 }) {
   const { user } = useAuth();
-  const { rooms, loading: roomsLoading, fetchRooms, createRoom, deleteRoom } = useRooms();
+  const {
+    rooms,
+    loading: roomsLoading,
+    fetchRooms,
+    createRoom,
+    deleteRoom,
+    joinRoom,
+    leaveRoom,
+  } = useRooms();
   const { changeUserStatus } = useUsers();
 
   // Get user data from context instead of localStorage
@@ -72,22 +79,19 @@ export default function SidebarDiscord({
 
   const handleJoinRoom = async (roomId) => {
     try {
-      const response = await http.post(`/rooms/${roomId}/join`);
-
-      Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: response.data.message,
-        timer: 1500,
-        showConfirmButton: false,
-      });
+      await joinRoom(roomId);
+      // fetchRooms will be called by the RoomContext
     } catch (error) {
       console.error("Error joining room:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: error.response?.data?.message || "Failed to join room",
-      });
+    }
+  };
+
+  const handleLeaveRoom = async (roomId) => {
+    try {
+      await leaveRoom(roomId);
+      // fetchRooms will be called by the RoomContext
+    } catch (error) {
+      console.error("Error leaving room:", error);
     }
   };
 
@@ -249,35 +253,67 @@ export default function SidebarDiscord({
                   >
                     {room.name}
                   </span>
-                  
-                  <div style={{ display: "flex", gap: "4px", marginLeft: "8px" }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleJoinRoom(room.id);
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#8e9297",
-                        cursor: "pointer",
-                        fontSize: "12px",
-                        padding: "2px 6px",
-                        borderRadius: "3px",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = "#40444b";
-                        e.target.style.color = "#dcddde";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = "transparent";
-                        e.target.style.color = "#8e9297";
-                      }}
-                      title="Join Room"
-                    >
-                      Join
-                    </button>
-                    
+
+                  <div
+                    style={{ display: "flex", gap: "4px", marginLeft: "8px" }}
+                  >
+                    {/* Show Join or Leave button based on membership status */}
+                    {room.isJoined ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLeaveRoom(room.id);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#fbbf24",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = "#f59e0b";
+                          e.target.style.color = "#ffffff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = "transparent";
+                          e.target.style.color = "#fbbf24";
+                        }}
+                        title="Leave Room"
+                      >
+                        Leave
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoinRoom(room.id);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#10b981",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = "#059669";
+                          e.target.style.color = "#ffffff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = "transparent";
+                          e.target.style.color = "#10b981";
+                        }}
+                        title="Join Room"
+                      >
+                        Join
+                      </button>
+                    )}
+
                     {/* Show delete button only if current user created the room */}
                     {room.createdBy === user?.id && (
                       <button
