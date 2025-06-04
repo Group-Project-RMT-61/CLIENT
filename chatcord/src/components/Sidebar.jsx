@@ -12,7 +12,7 @@ export default function SidebarDiscord({
   onLogout,
 }) {
   const { user } = useAuth();
-  const { rooms, loading: roomsLoading, fetchRooms, createRoom } = useRooms();
+  const { rooms, loading: roomsLoading, fetchRooms, createRoom, deleteRoom } = useRooms();
   const { changeUserStatus } = useUsers();
 
   // Get user data from context instead of localStorage
@@ -59,9 +59,13 @@ export default function SidebarDiscord({
 
     if (roomName) {
       try {
-        await createRoom(roomName.trim());
+        console.log("Sidebar - Creating room with name:", roomName.trim());
+        const roomData = { name: roomName.trim() };
+        console.log("Sidebar - Room data object:", roomData);
+        await createRoom(roomData);
+        console.log("Sidebar - Room creation completed");
       } catch (error) {
-        console.error("Error creating room:", error);
+        console.error("Sidebar - Error creating room:", error);
       }
     }
   };
@@ -84,6 +88,28 @@ export default function SidebarDiscord({
         title: "Error",
         text: error.response?.data?.message || "Failed to join room",
       });
+    }
+  };
+
+  const handleDeleteRoom = async (room) => {
+    // Confirm deletion
+    const result = await Swal.fire({
+      title: "Delete Room",
+      text: `Are you sure you want to delete "${room.name}"? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteRoom(room.id);
+      } catch (error) {
+        console.error("Error deleting room:", error);
+      }
     }
   };
 
@@ -138,7 +164,7 @@ export default function SidebarDiscord({
             alignItems: "center",
           }}
         >
-          <span>Text Channels</span>
+          <span>Channels</span>
           <button
             onClick={handleCreateRoom}
             style={{
@@ -223,33 +249,65 @@ export default function SidebarDiscord({
                   >
                     {room.name}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleJoinRoom(room.id);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#8e9297",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      padding: "2px 6px",
-                      borderRadius: "3px",
-                      marginLeft: "8px",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#40444b";
-                      e.target.style.color = "#dcddde";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                      e.target.style.color = "#8e9297";
-                    }}
-                    title="Join Room"
-                  >
-                    Join
-                  </button>
+                  
+                  <div style={{ display: "flex", gap: "4px", marginLeft: "8px" }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJoinRoom(room.id);
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#8e9297",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#40444b";
+                        e.target.style.color = "#dcddde";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "transparent";
+                        e.target.style.color = "#8e9297";
+                      }}
+                      title="Join Room"
+                    >
+                      Join
+                    </button>
+                    
+                    {/* Show delete button only if current user created the room */}
+                    {room.createdBy === user?.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRoom(room);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#f87171",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = "#ef4444";
+                          e.target.style.color = "#ffffff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = "transparent";
+                          e.target.style.color = "#f87171";
+                        }}
+                        title="Delete Room"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

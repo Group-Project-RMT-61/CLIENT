@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import http from "../lib/http";
+import socketService from "../lib/socket";
 import Swal from "sweetalert2";
 
 const RoomContext = createContext();
@@ -34,6 +35,141 @@ export const RoomProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Set up real-time event listeners
+  useEffect(() => {
+    const handleRoomCreated = (data) => {
+      console.log("Room created:", data.room);
+      setRooms(prevRooms => [...prevRooms, data.room]);
+      
+      // Show notification
+      Swal.fire({
+        icon: "info",
+        title: "New Room Created",
+        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    const handleRoomRemoved = (data) => {
+      console.log("Room removed:", data.roomId);
+      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
+      
+      // Show notification
+      Swal.fire({
+        icon: "warning",
+        title: "Room Deleted",
+        text: "A room has been deleted",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    // Add socket event listeners
+    socketService.onRoomCreated(handleRoomCreated);
+    socketService.onRoomRemoved(handleRoomRemoved);
+
+    // Cleanup listeners on unmount
+    return () => {
+      socketService.off("room_created", handleRoomCreated);
+      socketService.off("room_removed", handleRoomRemoved);
+    };
+  }, []);
+
+  // Set up real-time event listeners
+  useEffect(() => {
+    const handleRoomCreated = (data) => {
+      console.log("Room created:", data.room);
+      setRooms(prevRooms => [...prevRooms, data.room]);
+      
+      // Show notification
+      Swal.fire({
+        icon: "info",
+        title: "New Room Created",
+        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    const handleRoomRemoved = (data) => {
+      console.log("Room removed:", data.roomId);
+      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
+      
+      // Show notification
+      Swal.fire({
+        icon: "warning",
+        title: "Room Deleted",
+        text: "A room has been deleted",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    // Add socket event listeners
+    socketService.onRoomCreated(handleRoomCreated);
+    socketService.onRoomRemoved(handleRoomRemoved);
+
+    // Cleanup listeners on unmount
+    return () => {
+      socketService.off("room_created", handleRoomCreated);
+      socketService.off("room_removed", handleRoomRemoved);
+    };
+  }, []);
+
+  // Set up real-time event listeners
+  useEffect(() => {
+    const handleRoomCreated = (data) => {
+      console.log("Room created:", data.room);
+      setRooms(prevRooms => [...prevRooms, data.room]);
+      
+      // Show notification
+      Swal.fire({
+        icon: "info",
+        title: "New Room Created",
+        text: `"${data.room.name}" room was created by ${data.room.creator?.username || 'someone'}`,
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    const handleRoomRemoved = (data) => {
+      console.log("Room removed:", data.roomId);
+      setRooms(prevRooms => prevRooms.filter(room => room.id !== data.roomId));
+      
+      // Show notification
+      Swal.fire({
+        icon: "warning",
+        title: "Room Deleted",
+        text: "A room has been deleted",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    };
+
+    // Add socket event listeners
+    socketService.onRoomCreated(handleRoomCreated);
+    socketService.onRoomRemoved(handleRoomRemoved);
+
+    // Cleanup listeners on unmount
+    return () => {
+      socketService.off("room_created", handleRoomCreated);
+      socketService.off("room_removed", handleRoomRemoved);
+    };
   }, []);
 
   const joinRoom = async (roomId) => {
@@ -90,7 +226,12 @@ export const RoomProvider = ({ children }) => {
 
   const createRoom = async (roomData) => {
     try {
+      console.log("Creating room with data:", roomData);
+      const token = localStorage.getItem("access_token");
+      console.log("Token exists:", !!token);
+      
       const response = await http.post("/rooms", roomData);
+      console.log("Room creation successful:", response.data);
 
       Swal.fire({
         icon: "success",
@@ -105,12 +246,40 @@ export const RoomProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error("Error creating room:", error);
+      console.error("Error details:", error.response?.data);
+      console.error("Request config:", error.config);
       Swal.fire({
         icon: "error",
         title: "Error",
         text: error.response?.data?.message || "Failed to create room",
       });
       return null;
+    }
+  };
+
+  const deleteRoom = async (roomId) => {
+    try {
+      await http.delete(`/rooms/${roomId}`);
+
+      Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "Room deleted successfully!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      // Refresh rooms list
+      await fetchRooms();
+      return true;
+    } catch (error) {
+      console.error("Error deleting room:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.response?.data?.message || "Failed to delete room",
+      });
+      return false;
     }
   };
 
@@ -122,6 +291,7 @@ export const RoomProvider = ({ children }) => {
     joinRoom,
     leaveRoom,
     createRoom,
+    deleteRoom,
   };
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;
