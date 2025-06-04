@@ -139,6 +139,25 @@ class SocketService {
     }
   }
 
+  // Room management events
+  onRoomCreated(callback) {
+    if (this.socket) {
+      this.socket.on("room_created", callback);
+    }
+  }
+
+  onRoomDeleted(callback) {
+    if (this.socket) {
+      this.socket.on("room_deleted", callback);
+    }
+  }
+
+  onRoomRemoved(callback) {
+    if (this.socket) {
+      this.socket.on("room_removed", callback);
+    }
+  }
+
   onError(callback) {
     if (this.socket) {
       this.socket.on("error", callback);

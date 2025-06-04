@@ -356,6 +356,59 @@ export const ChatProvider = ({ children }) => {
           timer: 3000,
         });
       });
+
+      // Listen for room deletion events
+      socketService.onRoomDeleted((data) => {
+        console.log("Room deleted:", data);
+        // Check if the user is currently in the deleted room
+        if (selectedRoom && selectedRoom.id === data.roomId) {
+          // Save current messages before leaving
+          if (messages.length > 0) {
+            saveMessagesToCache(selectedRoom.id, messages);
+          }
+
+          // Clear the selected room and messages
+          setSelectedRoom(null);
+          saveSelectedRoomToStorage(null);
+          setMessages([]);
+
+          // Show notification to user
+          Swal.fire({
+            icon: "warning",
+            title: "Room Deleted",
+            text: `The room "${data.roomName || 'Unknown room'}" has been deleted by ${data.deletedBy || 'the room creator'}.`,
+            showConfirmButton: true,
+            confirmButtonText: "OK",
+          });
+        }
+      });
+
+      // Listen for room removal events (alternative event)
+      socketService.onRoomRemoved((data) => {
+        console.log("Room removed:", data);
+        // Check if the user is currently in the removed room
+        if (selectedRoom && selectedRoom.id === data.roomId) {
+          // Save current messages before leaving
+          if (messages.length > 0) {
+            saveMessagesToCache(selectedRoom.id, messages);
+          }
+
+          // Clear the selected room and messages
+          setSelectedRoom(null);
+          saveSelectedRoomToStorage(null);
+          setMessages([]);
+
+          // Show notification to user
+          Swal.fire({
+            icon: "info",
+            title: "Room Unavailable",
+            text: `The room "${data.roomName || 'Unknown room'}" is no longer available.`,
+            showConfirmButton: true,
+            confirmButtonText: "OK",
+          });
+        }
+      });
+
       return socket;
     }
   }, []);
