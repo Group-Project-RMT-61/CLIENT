@@ -63,27 +63,61 @@ export default function Home() {
         height: "100vh",
         maxHeight: "100vh",
         overflow: "hidden",
-        background:
-          "linear-gradient(135deg, #2c2f36 0%, #36393f 50%, #40444b 100%)",
+        background: `
+          radial-gradient(circle at 15% 25%, rgba(138, 43, 226, 0.25) 0%, transparent 45%),
+          radial-gradient(circle at 85% 75%, rgba(75, 0, 130, 0.2) 0%, transparent 45%),
+          radial-gradient(circle at 45% 15%, rgba(147, 112, 219, 0.15) 0%, transparent 50%),
+          radial-gradient(circle at 75% 85%, rgba(106, 90, 205, 0.18) 0%, transparent 50%),
+          linear-gradient(135deg, #0a0a1a 0%, #1a0d2e 25%, #2d1b4e 50%, #4a2c7a 75%, #2e1065 100%)
+        `,
         display: "flex",
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        color: "white",
+          "'Inter', 'Segoe UI', 'San Francisco', -apple-system, BlinkMacSystemFont, sans-serif",
+        color: "#e8e3f3",
+        position: "relative",
       }}
     >
-      {/* Connection Status */}
+      {/* Animated background particles effect */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(2px 2px at 20% 30%, #b19cd9, transparent),
+            radial-gradient(2px 2px at 40% 70%, #9370db, transparent),
+            radial-gradient(1px 1px at 90% 40%, #ba55d3, transparent),
+            radial-gradient(1px 1px at 60% 10%, #8a2be2, transparent),
+            radial-gradient(1px 1px at 15% 85%, #dda0dd, transparent),
+            radial-gradient(1px 1px at 85% 15%, #663399, transparent)
+          `,
+          backgroundSize:
+            "250px 250px, 350px 350px, 180px 180px, 280px 280px, 200px 200px, 320px 320px",
+          animation: "spaceFloat 25s infinite linear",
+          opacity: 0.6,
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Sidebar */}
       <div
         style={{
-          width: "240px",
-          backgroundColor: "#1e2124",
-          borderRight: "1px solid #40444b",
+          width: "280px",
+          backgroundColor: "rgba(10, 10, 26, 0.96)",
+          borderRight: "1px solid rgba(147, 112, 219, 0.2)",
           display: "flex",
           flexDirection: "column",
           height: "100vh",
           overflow: "hidden",
-          boxShadow: "2px 0 10px rgba(0, 0, 0, 0.3)",
+          backdropFilter: "blur(25px)",
+          boxShadow: `
+            4px 0 25px rgba(75, 0, 130, 0.3),
+            inset -1px 0 0 rgba(147, 112, 219, 0.15)
+          `,
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <Sidebar
@@ -102,6 +136,8 @@ export default function Home() {
           flexDirection: "column",
           height: "100vh",
           overflow: "hidden",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <ChatArea
@@ -115,7 +151,22 @@ export default function Home() {
         />
       </div>
 
-      {/* Status Feature Demo - Shown only for demo users */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        @keyframes spaceFloat {
+          0% { transform: translate(0px, 0px) rotate(0deg); }
+          25% { transform: translate(40px, -60px) rotate(90deg); }
+          50% { transform: translate(-30px, 30px) rotate(180deg); }
+          75% { transform: translate(20px, -40px) rotate(270deg); }
+          100% { transform: translate(0px, 0px) rotate(360deg); }
+        }
+        
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 25px rgba(147, 112, 219, 0.4); }
+          50% { box-shadow: 0 0 45px rgba(138, 43, 226, 0.6); }
+        }
+      `}</style>
     </div>
   );
 }

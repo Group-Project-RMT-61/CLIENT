@@ -103,7 +103,8 @@ function AISummary({ currentRoom, onClose }) {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        background: "rgba(30, 27, 38, 0.85)",
+        backdropFilter: "blur(8px)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -113,14 +114,17 @@ function AISummary({ currentRoom, onClose }) {
     >
       <div
         style={{
-          backgroundColor: "#2c2c2c",
-          borderRadius: "10px",
-          padding: "20px",
-          maxWidth: "500px",
-          width: "90%",
+          background: "linear-gradient(135deg, #23272a 0%, #2d1b4e 100%)",
+          borderRadius: "18px",
+          padding: "28px 28px 22px 28px",
+          maxWidth: "480px",
+          width: "95%",
           maxHeight: "70vh",
           overflow: "auto",
-          color: "white",
+          color: "#f3f3fa",
+          boxShadow: "0 8px 32px rgba(147,112,219,0.18)",
+          border: "1.5px solid #b19cd9",
+          fontFamily: "Inter, Segoe UI, Arial, sans-serif",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -129,7 +133,7 @@ function AISummary({ currentRoom, onClose }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "20px",
+            marginBottom: "18px",
           }}
         >
           <h3 style={{ margin: 0, color: "#00d4aa" }}>Room Summary</h3>

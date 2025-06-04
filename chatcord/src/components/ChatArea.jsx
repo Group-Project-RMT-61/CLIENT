@@ -16,6 +16,7 @@ export default function ChatArea({
   const [summaryText, setSummaryText] = useState("");
   const [showSummary, setShowSummary] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesAreaRef = useRef(null);
 
   const generateAISummary = async () => {
     if (!currentRoom || isLoadingSummary) return;
@@ -32,10 +33,7 @@ export default function ChatArea({
           "No summary available";
 
         // Remove emojis and special characters
-        cleanText = cleanText.replace(
-          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
-          ""
-        );
+        cleanText = cleanText.replace();
 
         // Remove markdown formatting
         cleanText = cleanText.replace(/[*#_~`]/g, "");
@@ -71,8 +69,8 @@ export default function ChatArea({
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (messagesAreaRef.current) {
+      messagesAreaRef.current.scrollTop = messagesAreaRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -85,65 +83,298 @@ export default function ChatArea({
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "column",
-          gap: "16px",
+          gap: "24px",
+          background: `
+          radial-gradient(circle at 50% 50%, rgba(147, 112, 219, 0.08) 0%, transparent 70%),
+          linear-gradient(135deg, rgba(10, 10, 26, 0.9) 0%, rgba(26, 13, 46, 0.9) 100%)
+        `,
+          backdropFilter: "blur(20px)",
+          position: "relative",
         }}
       >
+        {/* Floating orbs decoration */}
         <div
           style={{
-            width: "80px",
-            height: "80px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            borderRadius: "20px",
+            position: "absolute",
+            top: "20%",
+            right: "15%",
+            width: "120px",
+            height: "120px",
+            background:
+              "linear-gradient(135deg, rgba(147, 112, 219, 0.15), rgba(138, 43, 226, 0.1))",
+            borderRadius: "50%",
+            filter: "blur(45px)",
+            animation: "spaceFloat 8s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30%",
+            left: "10%",
+            width: "90px",
+            height: "90px",
+            background:
+              "linear-gradient(135deg, rgba(106, 90, 205, 0.12), rgba(75, 0, 130, 0.1))",
+            borderRadius: "50%",
+            filter: "blur(35px)",
+            animation: "spaceFloat 6s ease-in-out infinite reverse",
+          }}
+        />
+
+        <div
+          style={{
+            width: "120px",
+            height: "120px",
+            background: `
+              linear-gradient(135deg, #9370db 0%, #8a2be2 50%, #663399 100%),
+              linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%)
+            `,
+            borderRadius: "30px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "32px",
+            fontSize: "48px",
+            boxShadow: `
+              0 20px 40px rgba(147, 112, 219, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2)
+            `,
+            animation: "purpleGlow 3s ease-in-out infinite alternate",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          <div
+            style={{
+              position: "absolute",
+              top: "-50%",
+              left: "-50%",
+              right: "-50%",
+              bottom: "-50%",
+              background:
+                "linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent)",
+              transform: "rotate(45deg)",
+              animation: "shimmer 2s infinite linear",
+            }}
+          />
           💬
         </div>
-        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: "600" }}>
-          Welcome to ChatCord
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            fontSize: "16px",
-            color: "rgba(255, 255, 255, 0.6)",
-          }}
-        >
-          Select a room to start chatting
-        </p>
+
+        <div style={{ textAlign: "center", zIndex: 1 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "32px",
+              fontWeight: "700",
+              background: "linear-gradient(135deg, #b19cd9 0%, #9370db 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              marginBottom: "8px",
+            }}
+          >
+            Welcome to ChatCord
+          </h2>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "18px",
+              color: "rgba(232, 227, 243, 0.7)",
+              fontWeight: "400",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Select a room to start your conversation
+          </p>
+        </div>
+
         {!isConnected && (
           <div
             style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid #ef4444",
-              borderRadius: "8px",
-              padding: "12px 16px",
-              color: "#ef4444",
+              background: `
+                linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%),
+                rgba(15, 15, 35, 0.8)
+              `,
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "16px",
+              padding: "20px 24px",
+              color: "#ff6b6b",
               fontSize: "14px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "8px",
+              gap: "12px",
+              backdropFilter: "blur(10px)",
+              boxShadow: `
+                0 8px 32px rgba(239, 68, 68, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.05)
+              `,
+              maxWidth: "300px",
+              textAlign: "center",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              ⚠️ Not connected to chat server
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "16px",
+                fontWeight: "500",
+              }}
+            >
+              ⚠️ Connection Lost
             </div>
+            <p style={{ margin: 0, opacity: 0.8, fontSize: "13px" }}>
+              Unable to connect to chat server. Please check your connection.
+            </p>
             <a
               href="/status"
               style={{
-                color: "#ef4444",
-                textDecoration: "underline",
+                color: "#ff6b6b",
+                textDecoration: "none",
                 fontSize: "12px",
+                padding: "6px 12px",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                borderRadius: "6px",
+                transition: "all 0.2s ease",
+                fontWeight: "500",
               }}
             >
-              Check server status
+              Check Status
             </a>
           </div>
         )}
+
+        {/* Space decoration elements */}
+        <div
+          style={{
+            position: "absolute",
+            top: "5%",
+            right: "5%",
+            width: "120px",
+            height: "120px",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(186,85,211,0.12) 0%, rgba(147,112,219,0.08) 40%, transparent 70%)",
+            filter: "blur(15px)",
+            animation: "orbitFloat 20s infinite linear",
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: "8%",
+            left: "8%",
+            width: "180px",
+            height: "180px",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(138,43,226,0.1) 0%, rgba(106,90,205,0.06) 50%, transparent 75%)",
+            filter: "blur(20px)",
+            animation: "orbitFloat 30s infinite linear reverse",
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Cosmic decoration elements */}
+        <div
+          style={{
+            position: "absolute",
+            top: "10%",
+            left: "15%",
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: "#b19cd9",
+            boxShadow: "0 0 15px 5px rgba(147, 112, 219, 0.5)",
+            opacity: 0.7,
+            animation: "twinkle 4s infinite ease-in-out",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: "25%",
+            right: "20%",
+            width: "5px",
+            height: "5px",
+            borderRadius: "50%",
+            background: "#9370db",
+            boxShadow: "0 0 12px 4px rgba(147, 112, 219, 0.6)",
+            opacity: 0.6,
+            animation: "twinkle 3s infinite ease-in-out 1s",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "15%",
+            right: "30%",
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: "#663399",
+            boxShadow: "0 0 18px 6px rgba(138, 43, 226, 0.5)",
+            opacity: 0.8,
+            animation: "twinkle 5s infinite ease-in-out 0.5s",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30%",
+            left: "25%",
+            width: "4px",
+            height: "4px",
+            borderRadius: "50%",
+            background: "#dda0dd",
+            boxShadow: "0 0 10px 3px rgba(221, 160, 221, 0.7)",
+            opacity: 0.7,
+            animation: "twinkle 6s infinite ease-in-out 2s",
+            pointerEvents: "none",
+          }}
+        />
+
+        <style>{`
+          @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+          }
+          
+          @keyframes spaceFloat {
+            0% { transform: translate(0px, 0px) rotate(0deg); }
+            25% { transform: translate(40px, -60px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(20px, -40px) rotate(270deg); }
+            100% { transform: translate(0px, 0px) rotate(360deg); }
+          }
+          
+          @keyframes purpleGlow {
+            0%, 100% { box-shadow: 0 20px 40px rgba(147, 112, 219, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+            50% { box-shadow: 0 25px 50px rgba(138, 43, 226, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+          }
+          
+          @keyframes orbitFloat {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+            25% { transform: scale(1.1) rotate(90deg); opacity: 0.7; }
+            50% { transform: scale(1) rotate(180deg); opacity: 0.5; }
+            75% { transform: scale(0.9) rotate(270deg); opacity: 0.3; }
+            100% { transform: scale(1) rotate(360deg); opacity: 0.5; }
+          }
+
+          @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -213,95 +444,257 @@ export default function ChatArea({
         overflow: "hidden",
         position: "relative",
         background: `
-          radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
-          linear-gradient(180deg, rgba(54, 57, 63, 0.8) 0%, rgba(64, 68, 75, 0.9) 100%)
+          radial-gradient(circle at 25% 75%, rgba(138, 43, 226, 0.22) 0%, transparent 65%),
+          radial-gradient(circle at 75% 25%, rgba(75, 0, 130, 0.18) 0%, transparent 65%),
+          linear-gradient(135deg, #0a0a1a 0%, #1a0d2e 40%, #2d1b4e 80%, #4a2c7a 100%)
         `,
+        backdropFilter: "blur(16px)",
       }}
     >
+      {/* Cosmic decoration elements */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10%",
+          left: "15%",
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: "#b19cd9",
+          boxShadow: "0 0 15px 5px rgba(147, 112, 219, 0.5)",
+          opacity: 0.7,
+          animation: "twinkle 4s infinite ease-in-out",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: "25%",
+          right: "20%",
+          width: "5px",
+          height: "5px",
+          borderRadius: "50%",
+          background: "#9370db",
+          boxShadow: "0 0 12px 4px rgba(147, 112, 219, 0.6)",
+          opacity: 0.6,
+          animation: "twinkle 3s infinite ease-in-out 1s",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "15%",
+          right: "30%",
+          width: "6px",
+          height: "6px",
+          borderRadius: "50%",
+          background: "#663399",
+          boxShadow: "0 0 18px 6px rgba(138, 43, 226, 0.5)",
+          opacity: 0.8,
+          animation: "twinkle 5s infinite ease-in-out 0.5s",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "30%",
+          left: "25%",
+          width: "4px",
+          height: "4px",
+          borderRadius: "50%",
+          background: "#dda0dd",
+          boxShadow: "0 0 10px 3px rgba(221, 160, 221, 0.7)",
+          opacity: 0.7,
+          animation: "twinkle 6s infinite ease-in-out 2s",
+          pointerEvents: "none",
+        }}
+      />
       {/* Chat Header */}
       <div
         style={{
-          padding: "20px 24px",
-          borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
+          padding: "24px 32px",
+          borderBottom: "1.5px solid rgba(147, 112, 219, 0.25)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexShrink: 0,
-          backgroundColor: "rgba(255, 255, 255, 0.03)",
-          backdropFilter: "blur(10px)",
-          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+          background: `
+            linear-gradient(135deg, rgba(10, 10, 26, 0.96) 0%, rgba(26, 13, 46, 0.94) 100%),
+            linear-gradient(90deg, rgba(147, 112, 219, 0.12) 0%, rgba(138, 43, 226, 0.12) 100%)
+          `,
+          boxShadow: `0 4px 24px 0 rgba(147, 112, 219, 0.15)`,
+          position: "relative",
         }}
       >
-        <div>
-          <h2
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
             style={{
-              margin: 0,
-              fontSize: "22px",
-              fontWeight: "700",
-              color: "#ffffff",
-              textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              background: isConnected
+                ? "linear-gradient(135deg, #9370db 0%, #8a2be2 100%)"
+                : "linear-gradient(135deg, #ba55d3 0%, #9932cc 100%)",
+              boxShadow: isConnected
+                ? "0 0 20px rgba(147, 112, 219, 0.6)"
+                : "0 0 20px rgba(186, 85, 211, 0.6)",
+              animation: isConnected ? "pulse 2s infinite" : "none",
             }}
-          >
-            # {currentRoom.name}
-          </h2>
-          <p
-            style={{
-              margin: "4px 0 0 0",
-              fontSize: "14px",
-              color: "rgba(255, 255, 255, 0.7)",
-              fontWeight: "500",
-            }}
-          >
-            {onlineUsers.length} members online
-            {!isConnected && (
-              <span style={{ color: "#ef4444", marginLeft: "8px" }}>
-                • Disconnected
+          />
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "24px",
+                fontWeight: "700",
+                background: "linear-gradient(135deg, #e8e3f3 0%, #b19cd9 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                letterSpacing: "0.5px",
+              }}
+            >
+              # {currentRoom.name}
+            </h2>
+            <p
+              style={{
+                margin: "4px 0 0 0",
+                fontSize: "14px",
+                color: "rgba(232, 227, 243, 0.7)",
+                fontWeight: "500",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <span
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <div
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#9370db",
+                    boxShadow: "0 0 10px rgba(147, 112, 219, 0.6)",
+                  }}
+                />
+                {onlineUsers.length} members online
               </span>
-            )}
-          </p>{" "}
-        </div>{" "}
-        <div style={{ display: "flex", gap: "8px" }}>
+              {!isConnected && (
+                <span
+                  style={{
+                    color: "#ba55d3",
+                    marginLeft: "8px",
+                    padding: "2px 8px",
+                    background: "rgba(255, 64, 129, 0.1)",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                  }}
+                >
+                  • Disconnected
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "12px" }}>
           <button
             onClick={generateAISummary}
             disabled={isLoadingSummary}
             style={{
               background: isLoadingSummary
                 ? "rgba(255, 255, 255, 0.05)"
-                : "linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%)",
+                : `
+                  linear-gradient(135deg, rgba(147, 112, 219, 0.25) 0%, rgba(138, 43, 226, 0.25) 100%),
+                  linear-gradient(135deg, rgba(10, 10, 26, 0.9) 0%, rgba(26, 13, 46, 0.9) 100%)
+                `,
               border: isLoadingSummary
                 ? "1px solid rgba(255, 255, 255, 0.1)"
-                : "1px solid rgba(102, 126, 234, 0.5)",
-              borderRadius: "10px",
-              padding: "10px 18px",
-              color: isLoadingSummary ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
+                : "1px solid rgba(147, 112, 219, 0.4)",
+              borderRadius: "12px",
+              padding: "12px 20px",
+              color: isLoadingSummary ? "rgba(255, 255, 255, 0.5)" : "#e8e3f3",
               cursor: isLoadingSummary ? "not-allowed" : "pointer",
               fontSize: "14px",
               fontWeight: "600",
               boxShadow: isLoadingSummary
                 ? "none"
-                : "0 4px 12px rgba(102, 126, 234, 0.3)",
+                : `
+                  0 4px 20px rgba(147, 112, 219, 0.25),
+                  0 0 0 1px rgba(255, 255, 255, 0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                `,
               transition: "all 0.2s ease",
+              backdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            {isLoadingSummary ? "Generating..." : "AI Summary"}
+            {isLoadingSummary ? (
+              <>
+                <div
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    border: "2px solid rgba(255, 255, 255, 0.3)",
+                    borderTop: "2px solid #9370db",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
+                Generating...
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: "16px" }}>🤖</span>
+                AI Summary
+              </>
+            )}
           </button>
         </div>
+
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+          }
+          
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          
+          @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+          }
+        `}</style>
       </div>
       {/* Messages Area */}
       <div
+        ref={messagesAreaRef}
         style={{
           flex: 1,
-          padding: "24px",
+          padding: "32px",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
+          gap: "24px",
           minHeight: 0,
           scrollBehavior: "smooth",
+          background: `
+            radial-gradient(circle at 35% 65%, rgba(138, 43, 226, 0.12) 0%, transparent 65%),
+            radial-gradient(circle at 65% 35%, rgba(75, 0, 130, 0.08) 0%, transparent 65%)
+          `,
         }}
       >
-        {" "}
         {Array.isArray(messages) && messages.length > 0 ? (
           messages
             .map((msgData) => {
@@ -328,42 +721,55 @@ export default function ChatArea({
                   key={msg.id}
                   style={{
                     display: "flex",
-                    gap: "12px",
-                    backgroundColor:
+                    gap: "18px",
+                    background:
                       msg.isAI || msgData.isAI
-                        ? "rgba(102, 126, 234, 0.15)"
-                        : "rgba(255, 255, 255, 0.05)",
-                    borderRadius: "12px",
-                    padding: "16px",
+                        ? "linear-gradient(135deg, rgba(147,112,219,0.22) 0%, rgba(138,43,226,0.18) 100%)"
+                        : "rgba(10, 10, 26, 0.94)",
+                    borderRadius: "18px",
+                    padding: "18px 22px",
                     border:
                       msg.isAI || msgData.isAI
-                        ? "1px solid rgba(102, 126, 234, 0.4)"
-                        : "1px solid rgba(255, 255, 255, 0.1)",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+                        ? "1.5px solid rgba(147,112,219,0.35)"
+                        : "1.5px solid rgba(255,255,255,0.06)",
+                    boxShadow:
+                      msg.isAI || msgData.isAI
+                        ? "0 4px 24px 0 rgba(147,112,219,0.15)"
+                        : "0 2px 12px 0 rgba(10,10,26,0.25)",
+                    backdropFilter: "blur(8px)",
+                    alignItems: "flex-start",
                   }}
                 >
-                  {" "}
                   <div
                     style={{
                       position: "relative",
-                      width: "40px",
-                      height: "40px",
+                      width: "44px",
+                      height: "44px",
                       flexShrink: 0,
                     }}
                   >
                     <div
                       style={{
-                        width: "40px",
-                        height: "40px",
+                        width: "44px",
+                        height: "44px",
                         borderRadius: "50%",
                         background:
                           msg.isAI || msgData.isAI
-                            ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                            : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            ? "linear-gradient(135deg, #9370db 0%, #663399 100%)"
+                            : "linear-gradient(135deg, #2d1b4e 0%, #0a0a1a 100%)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "16px",
+                        fontSize: "19px",
+                        boxShadow:
+                          msg.isAI || msgData.isAI
+                            ? "0 2px 12px rgba(147,112,219,0.25)"
+                            : "0 1px 4px rgba(10,10,26,0.25)",
+                        border:
+                          msg.isAI || msgData.isAI
+                            ? "1.5px solid #9370db"
+                            : "1.5px solid #2d1b4e",
+                        color: msg.isAI || msgData.isAI ? "#0a0a1a" : "#b19cd9",
                       }}
                     >
                       {msg.isAI || msgData.isAI ? "🤖" : msg.avatar || "👤"}
@@ -397,25 +803,36 @@ export default function ChatArea({
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "4px",
+                        gap: "10px",
+                        marginBottom: "2px",
                       }}
                     >
-                      {" "}
                       <span
                         style={{
-                          fontWeight: "600",
-                          fontSize: "14px",
-                          color: msg.isAI || msgData.isAI ? "#667eea" : "white",
+                          fontWeight: 700,
+                          fontSize: "15px",
+                          background:
+                            msg.isAI || msgData.isAI
+                              ? "linear-gradient(135deg, #b19cd9 0%, #9370db 100%)"
+                              : "linear-gradient(135deg, #e8e3f3 0%, #b19cd9 100%)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                          letterSpacing: "0.2px",
+                          lineHeight: 1.1,
+                          maxWidth: 120,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {msg.isAI || msgData.isAI
-                          ? "🤖 AI Assistant"
+                          ? "AI Assistant"
                           : msg.username ||
                             msg.user?.username ||
                             msg.user?.name ||
@@ -428,11 +845,14 @@ export default function ChatArea({
                         <span
                           style={{
                             fontSize: "10px",
-                            backgroundColor: "#667eea",
-                            color: "white",
-                            padding: "2px 6px",
+                            background:
+                              "linear-gradient(135deg, #9370db 0%, #b19cd9 100%)",
+                            color: "#0a0a1a",
+                            padding: "2px 7px",
                             borderRadius: "10px",
-                            fontWeight: "bold",
+                            fontWeight: 700,
+                            boxShadow: "0 1px 4px rgba(147,112,219,0.25)",
+                            border: "1px solid rgba(255,255,255,0.12)",
                           }}
                         >
                           AI
@@ -441,17 +861,23 @@ export default function ChatArea({
                       <span
                         style={{
                           fontSize: "12px",
-                          color: "rgba(255, 255, 255, 0.5)",
+                          color: "#b19cd9",
+                          marginLeft: "auto",
+                          fontWeight: 400,
                         }}
                       >
                         {formattedTime}
                       </span>
                     </div>
-                    <p
+                    <div
                       style={{
-                        margin: "0 0 8px 0",
-                        fontSize: "14px",
-                        lineHeight: "1.5",
+                        fontSize: "15px",
+                        color: "#f0ebf8",
+                        lineHeight: 1.7,
+                        wordBreak: "break-word",
+                        marginBottom: msg.attachments ? 8 : 0,
+                        fontWeight: 400,
+                        letterSpacing: "0.01em",
                       }}
                     >
                       {typeof msg.content === "string"
@@ -459,7 +885,7 @@ export default function ChatArea({
                         : typeof msg.message === "string"
                         ? msg.message
                         : String(msg.content || msg.message || "")}
-                    </p>
+                    </div>
                     {msg.attachments && Array.isArray(msg.attachments) && (
                       <div
                         style={{
@@ -484,7 +910,8 @@ export default function ChatArea({
                               alignItems: "center",
                               justifyContent: "center",
                               fontSize: "12px",
-                              fontWeight: "600",
+                              fontWeight: 600,
+                              color: "#fff",
                             }}
                           >
                             {String(att || "")}
@@ -513,13 +940,13 @@ export default function ChatArea({
               style={{
                 width: "60px",
                 height: "60px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #9370db 0%, #663399 100%)",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: "24px",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                boxShadow: "0 4px 12px rgba(147, 112, 219, 0.35)",
               }}
             >
               💬
@@ -528,7 +955,7 @@ export default function ChatArea({
               <p
                 style={{
                   margin: "0 0 8px 0",
-                  color: "rgba(255, 255, 255, 0.8)",
+                  color: "#e8e3f3",
                   fontSize: "16px",
                   fontWeight: "600",
                 }}
@@ -538,7 +965,7 @@ export default function ChatArea({
               <p
                 style={{
                   margin: "0",
-                  color: "rgba(255, 255, 255, 0.5)",
+                  color: "#b19cd9",
                   fontSize: "14px",
                 }}
               >
@@ -554,10 +981,14 @@ export default function ChatArea({
       <div
         style={{
           padding: "24px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+          borderTop: "1px solid rgba(147, 112, 219, 0.2)",
           flexShrink: 0,
-          backgroundColor: "rgba(255, 255, 255, 0.02)",
-          backdropFilter: "blur(10px)",
+          backgroundColor: "rgba(10, 10, 26, 0.85)",
+          backdropFilter: "blur(15px)",
+          boxShadow: `
+            0 -4px 20px rgba(138, 43, 226, 0.15),
+            inset 0 1px 0 rgba(147, 112, 219, 0.1)
+          `,
         }}
       >
         <form
@@ -582,11 +1013,11 @@ export default function ChatArea({
               flex: 1,
               padding: "14px 18px",
               backgroundColor: isConnected
-                ? "rgba(255, 255, 255, 0.12)"
-                : "rgba(255, 255, 255, 0.05)",
+                ? "rgba(147, 112, 219, 0.12)"
+                : "rgba(147, 112, 219, 0.05)",
               border: isConnected
-                ? "2px solid rgba(102, 126, 234, 0.3)"
-                : "2px solid rgba(255, 255, 255, 0.1)",
+                ? "2px solid rgba(147, 112, 219, 0.35)"
+                : "2px solid rgba(147, 112, 219, 0.15)",
               borderRadius: "12px",
               color: isConnected ? "white" : "rgba(255, 255, 255, 0.5)",
               fontSize: "14px",
@@ -597,13 +1028,13 @@ export default function ChatArea({
             }}
             onFocus={(e) => {
               if (isConnected) {
-                e.target.style.borderColor = "rgba(102, 126, 234, 0.6)";
-                e.target.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+                e.target.style.borderColor = "rgba(147, 112, 219, 0.7)";
+                e.target.style.backgroundColor = "rgba(147, 112, 219, 0.15)";
               }
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = "rgba(102, 126, 234, 0.3)";
-              e.target.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
+              e.target.style.borderColor = "rgba(147, 112, 219, 0.35)";
+              e.target.style.backgroundColor = "rgba(147, 112, 219, 0.12)";
             }}
           />
           <button
@@ -613,12 +1044,12 @@ export default function ChatArea({
               padding: "14px 20px",
               background:
                 isConnected && newMessage.trim()
-                  ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                  : "rgba(255, 255, 255, 0.08)",
+                  ? "linear-gradient(135deg, #9370db 0%, #663399 100%)"
+                  : "rgba(147, 112, 219, 0.08)",
               border:
                 isConnected && newMessage.trim()
-                  ? "2px solid rgba(102, 126, 234, 0.3)"
-                  : "2px solid rgba(255, 255, 255, 0.1)",
+                  ? "2px solid rgba(147, 112, 219, 0.4)"
+                  : "2px solid rgba(147, 112, 219, 0.15)",
               borderRadius: "12px",
               color:
                 isConnected && newMessage.trim()
@@ -630,7 +1061,7 @@ export default function ChatArea({
               fontWeight: "600",
               boxShadow:
                 isConnected && newMessage.trim()
-                  ? "0 4px 12px rgba(102, 126, 234, 0.3)"
+                  ? "0 4px 12px rgba(147, 112, 219, 0.35)"
                   : "none",
               transition: "all 0.2s ease",
             }}
@@ -677,7 +1108,7 @@ export default function ChatArea({
         >
           <div
             style={{
-              background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+              background: "linear-gradient(135deg, #0a0a1a 0%, #2d1b4e 100%)",
               borderRadius: "16px",
               padding: "24px",
               maxWidth: "500px",
@@ -721,8 +1152,8 @@ export default function ChatArea({
                 style={{
                   padding: "10px 16px",
                   background: isLoadingSummary
-                    ? "rgba(59, 130, 246, 0.3)"
-                    : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    ? "rgba(147, 112, 219, 0.3)"
+                    : "linear-gradient(135deg, #9370db 0%, #663399 100%)",
                   border: "none",
                   borderRadius: "8px",
                   color: "white",
